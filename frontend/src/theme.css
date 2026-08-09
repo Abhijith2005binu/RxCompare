@@ -1,0 +1,78 @@
+/* ---------------------------------------------------------------------
+   Design tokens — v2
+   Concept: an established health-finance product, not a craft project.
+   Deep teal-navy (institutional, pharmaceutical-grade) as the primary
+   ink, a restrained brass accent for structural dividers/icons (used
+   nowhere else, so it reads as considered rather than decorative), and
+   an editorial serif for headlines to carry authority. Emerald is
+   reserved exclusively for savings figures; rust exclusively for
+   branded strike-through prices — both act as data-encoded color, not
+   decoration.
+   ------------------------------------------------------------------- */
+:root {
+  --bg: #ffffff;
+  --bg-subtle: #f5f7f5;
+  --surface: #ffffff;
+  --ink: #10241f;
+  --ink-soft: #55685f;
+  --ink-faint: #8a9890;
+  --line: #e1e7e3;
+  --line-strong: #c7d2cb;
+
+  --navy: #123c33;
+  --navy-deep: #0a2621;
+  --brass: #a97e3f;
+  --brass-soft: #f1e7d5;
+  --rust: #a6452a;
+  --emerald: #1f8a5f;
+  --emerald-bg: #e6f4ec;
+
+  --font-display: "Newsreader", Georgia, serif;
+  --font-body: "IBM Plex Sans", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", "Courier New", monospace;
+
+  --radius: 6px;
+  --radius-lg: 12px;
+  --shadow-sm: 0 1px 2px rgba(10, 38, 33, 0.06);
+  --shadow-md: 0 8px 24px rgba(10, 38, 33, 0.08);
+  --shadow-lg: 0 16px 48px rgba(10, 38, 33, 0.14);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+button {
+  font-family: inherit;
+}
+
+a {
+  color: var(--teal-deep);
+}
+
+:focus-visible {
+  outline: 2px solid var(--navy);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    transition-duration: 0.001ms !important;
+  }
+}
