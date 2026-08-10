@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import Nav from "./components/Nav.jsx";
 import Hero from "./components/Hero.jsx";
-import MedicineCard from "./components/MedicineCard.jsx";
+import MedicineCard, { SkeletonCard } from "./components/MedicineCard.jsx";
 import StoreDrawer from "./components/StoreDrawer.jsx";
 import Footer from "./components/Footer.jsx";
 import { searchMedicines, getAllMedicines, getNearbyStores } from "./utils/api.js";
@@ -85,16 +85,18 @@ export default function App() {
           </p>
         )}
 
-        {searched && results.length > 0 && (
+        {!loading && searched && results.length > 0 && (
           <p className="app__results-label">
             {results.length} match{results.length > 1 ? "es" : ""}
           </p>
         )}
 
         <div className="app__results">
-          {results.map((med) => (
-            <MedicineCard key={med._id} medicine={med} onLocateStores={handleLocateStores} />
-          ))}
+          {loading && Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}
+          {!loading &&
+            results.map((med, i) => (
+              <MedicineCard key={med._id} medicine={med} onLocateStores={handleLocateStores} index={i} />
+            ))}
         </div>
       </main>
 
@@ -110,14 +112,14 @@ export default function App() {
 
       <style>{`
         .app__main {
-          max-width: 720px;
+          max-width: 960px;
           margin: 0 auto;
-          padding: 36px 24px 60px;
+          padding: var(--space-8) var(--space-6) 60px;
           min-height: 30vh;
         }
         .app__error {
           color: var(--rust);
-          font-size: 0.9rem;
+          font-size: var(--text-sm);
         }
         .app__empty {
           color: var(--ink-soft);
@@ -125,17 +127,17 @@ export default function App() {
           line-height: 1.6;
         }
         .app__results-label {
-          margin: 0 0 16px;
+          margin: 0 0 var(--space-4);
           font-family: var(--font-mono);
-          font-size: 0.75rem;
+          font-size: var(--text-xs);
           text-transform: uppercase;
           letter-spacing: 0.05em;
           color: var(--ink-faint);
         }
         .app__results {
-          display: flex;
-          flex-direction: column;
-          gap: 16px;
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+          gap: var(--space-4);
         }
       `}</style>
     </div>

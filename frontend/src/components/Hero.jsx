@@ -38,7 +38,7 @@ export default function Hero({ onSearch, loading, stats }) {
 
       <style>{`
         .hero {
-          background: var(--bg-subtle);
+          background: radial-gradient(circle at top left, #ffffff 0%, var(--bg-subtle) 60%);
           border-bottom: 1px solid var(--line);
         }
         .hero__inner {

@@ -116,6 +116,16 @@ export default function StoreDrawer({ open, stores, medicineName, locating, onCl
           overflow-y: auto;
           padding: 18px 22px 24px;
         }
+        .drawer__body::-webkit-scrollbar {
+          width: 6px;
+        }
+        .drawer__body::-webkit-scrollbar-thumb {
+          background: var(--line-strong);
+          border-radius: 999px;
+        }
+        .drawer__body::-webkit-scrollbar-track {
+          background: transparent;
+        }
         .drawer__status {
           color: var(--ink-soft);
           font-size: 0.88rem;

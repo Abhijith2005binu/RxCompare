@@ -5,9 +5,10 @@ export default function Nav() {
     <header className="nav">
       <div className="nav__inner">
         <div className="nav__brand">
-          <span className="nav__mark">
-            <Pill size={18} strokeWidth={2} />
-          </span>
+      
+      <span className="nav__mark">
+        <img src="/logo.png" alt="RxCompare logo" className="nav__logo-img" />
+      </span>
           <span className="nav__word">RxCompare</span>
         </div>
         <span className="nav__pill">PMBJP-aligned pricing</span>
@@ -36,14 +37,13 @@ export default function Nav() {
           gap: 9px;
         }
         .nav__mark {
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
           width: 30px;
           height: 30px;
           border-radius: 8px;
-          background: var(--navy);
-          color: var(--brass-soft);
+          background: none;      
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
         }
         .nav__word {
           font-family: var(--font-display);
@@ -51,6 +51,11 @@ export default function Nav() {
           font-size: 1.15rem;
           letter-spacing: -0.01em;
           color: var(--navy-deep);
+        }
+        .nav__logo-img {
+          width: 26px;
+          height: 26px;
+          object-fit: contain;
         }
         .nav__pill {
           font-family: var(--font-mono);
