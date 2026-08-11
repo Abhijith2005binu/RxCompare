@@ -12,7 +12,106 @@
     />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <div class="app">
+      <!-- Nav -->
+      <header class="nav">
+        <div class="nav__inner">
+          <div class="nav__brand">
+            <span class="nav__mark">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7Z" />
+                <path d="m8.5 8.5 7 7" />
+              </svg>
+            </span>
+            <span class="nav__word">RxCompare</span>
+          </div>
+          <span class="nav__pill">PMBJP-aligned pricing</span>
+        </div>
+      </header>
+
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero__inner">
+          <p class="hero__eyebrow">Pradhan Mantri Bhartiya Janaushadhi Pariyojana</p>
+          <h1 class="hero__title">The same medicine, <em>a fraction</em> of the price.</h1>
+          <p class="hero__subtitle">
+            Enter the branded name from your prescription. We match it to its government-listed
+            generic equivalent, show the exact price gap, and find the nearest Jan Aushadhi Kendra
+            that stocks it.
+          </p>
+
+          <form id="search-form" class="search-bar">
+            <svg class="search-bar__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="11" cy="11" r="8" />
+              <path d="m21 21-4.3-4.3" />
+            </svg>
+            <input
+              id="search-input"
+              type="text"
+              placeholder="Try “Crocin”, “Storvas”, “Glycomet”, “Azithral”…"
+              autocomplete="off"
+              class="search-bar__input"
+            />
+            <button type="submit" id="search-button" class="search-bar__button">Compare price</button>
+          </form>
+
+          <dl id="hero-stats" class="hero__stats" hidden>
+            <div class="hero__stat">
+              <dt>Formulations indexed</dt>
+              <dd id="stat-medicine-count">—</dd>
+            </div>
+            <div class="hero__stat">
+              <dt>Average saving</dt>
+              <dd id="stat-avg-savings">—</dd>
+            </div>
+            <div class="hero__stat">
+              <dt>Kendras listed</dt>
+              <dd id="stat-store-count">—</dd>
+            </div>
+          </dl>
+        </div>
+      </section>
+
+      <!-- Results -->
+      <main class="app__main">
+        <p id="results-error" class="app__error" hidden></p>
+        <p id="results-empty" class="app__empty" hidden>
+          No match for that name yet — this demo ships with 16 common formulations. Try
+          “Crocin”, “Storvas”, “Glycomet”, or “Azithral”.
+        </p>
+        <p id="results-label" class="app__results-label" hidden></p>
+        <div id="results-grid" class="app__results"></div>
+      </main>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="footer__inner">
+          <p class="footer__disclaimer">
+            Generic pricing shown here is sample/demo data — swap in the live PMBJP price list
+            from data.gov.in before relying on this for real purchases.
+          </p>
+          <p class="footer__meta">Built for SDG 3 · Good Health &amp; Well-Being</p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Store drawer -->
+    <div id="drawer-backdrop" class="drawer-backdrop"></div>
+    <aside id="drawer" class="drawer" aria-hidden="true">
+      <div class="drawer__header">
+        <div>
+          <p class="drawer__eyebrow">Nearest Jan Aushadhi Kendra</p>
+          <h4 id="drawer-title" class="drawer__title"></h4>
+        </div>
+        <button id="drawer-close" class="drawer__close" aria-label="Close">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+      <div id="drawer-body" class="drawer__body"></div>
+    </aside>
+
+    <script type="module" src="/src/main.js"></script>
   </body>
 </html>
