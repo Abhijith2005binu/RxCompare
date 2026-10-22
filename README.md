@@ -1,28 +1,28 @@
 # RxCompare
 
-> **Prescription-to-Generic Medicine Price Comparator**  
+> **Prescription-to-Generic Medicine Price Comparator & Live Jan Aushadhi Kendra Stock Finder**  
 > Aligned with **UN Sustainable Development Goal 3: Good Health & Well-Being**
+> Powered by **ABDM / UHI (Ayushman Bharat Digital Mission - Unified Health Interface) Protocol**
 
-A user types a **branded** medicine name from their prescription; the app finds the **Jan Aushadhi generic equivalent**, calculates the direct savings percentage and price gap, and displays the nearest **Jan Aushadhi Kendra** with distance calculation using the Haversine formula.
+A user types a **branded** medicine name from their prescription; the app queries the **live ABDM / PMBJP Medicine API** to find the generic equivalent, displays all purchase details (subsidized generic MRP, pack size, prescription requirement, branded market comparisons, and direct savings percentage), and locates the nearest **Jan Aushadhi Kendra** that currently has the medicine **in stock**.
 
-**Stack:** MongoDB · Express.js · React (Vite) · Node.js — clean, modular JavaScript.
+**Stack:** ABDM / UHI Gateway API · Express.js · React / Vite · Node.js (with optional MongoDB caching).
 
 ```
 RxCompare/
-├── backend/                  Express API + Mongoose models + middleware + seed scripts
-│   ├── config/               Database connection configuration
-│   ├── data/                 Seed datasets for medicines & Kendra stores
-│   ├── middleware/           Validation, request logger, & centralized error handling
-│   ├── models/               Mongoose schemas (Medicine, Store) with virtuals & indexes
-│   ├── routes/               Full CRUD REST API endpoints (/medicines, /stores)
-│   ├── scripts/              Database seed & CSV import utilities
-│   └── utils/                Geospatial distance calculation (Haversine)
-├── frontend/                 React (Vite) Single-Page Application
-│   ├── public/               Static branding assets
-│   └── src/                  React UI components, styles, & API client
-├── package.json              Root workspace runner (concurrently)
+├── backend/                  Express API + ABDM UHI Gateway Service + routes
+│   ├── config/               Database configuration (optional fallback)
+│   ├── routes/               REST API endpoints (/medicines, /stores, /uhi)
+│   ├── services/             uhiGatewayService.js (ABDM / UHI v2.0.2 Gateway Integration)
+│   ├── utils/                Geospatial distance calculation (Haversine)
+│   └── server.js             Express application
+├── frontend/                 Vite Single-Page Application
+│   ├── src/                  React/Vite UI components, live stock drawer, & API client
+│   └── index.html            App entrypoint
+├── package.json              Root workspace runner
 └── README.md
 ```
+
 
 ---
 

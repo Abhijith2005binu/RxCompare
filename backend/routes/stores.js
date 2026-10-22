@@ -1,20 +1,19 @@
 const express = require("express");
 const router = express.Router();
+const uhiGatewayService = require("../services/uhiGatewayService");
 const Store = require("../models/Store");
+const { getDbStatus } = require("../config/db");
 const { distanceKm } = require("../utils/geo");
 const {
-  validateObjectId,
   validateCreateStore,
-  validateUpdateStore,
-  validateNearbyStoreQuery,
 } = require("../middleware/validate");
 
 /**
- * GET /api/stores -> full static list
+ * GET /api/stores -> full list of Jan Aushadhi Kendras
  */
 router.get("/", async (_req, res, next) => {
   try {
-    const stores = await Store.find().sort({ name: 1 }).lean();
+    const stores = uhiGatewayService.getNearbyKendras({ limit: 50 });
     res.json(stores);
   } catch (err) {
     next(err);
@@ -22,29 +21,22 @@ router.get("/", async (_req, res, next) => {
 });
 
 /**
- * GET /api/stores/nearby?lat=8.5&lng=76.9&limit=5
- * Computes distance in-app (Haversine) against the static seeded list.
- * Falls back to sorting by city name if no coords given.
+ * GET /api/stores/nearby?lat=8.5&lng=76.9&limit=5&medicineId=med-001&inStockOnly=true
+ * Computes distance in-app (Haversine) against the ABDM / PMBJP Kendra registry.
+ * Optionally filters by medicine stock availability.
  */
-router.get("/nearby", validateNearbyStoreQuery, async (req, res, next) => {
+router.get("/nearby", async (req, res, next) => {
   try {
-    const { lat, lng, limit } = req.query;
-    const stores = await Store.find().lean();
+    const { lat, lng, limit, medicineId, inStockOnly, city } = req.query;
 
-    if (!lat || !lng) {
-      return res.json(stores.sort((a, b) => a.city.localeCompare(b.city)));
-    }
-
-    const userLat = parseFloat(lat);
-    const userLng = parseFloat(lng);
-
-    const withDistance = stores
-      .map((s) => ({
-        ...s,
-        distanceKm: Math.round(distanceKm(userLat, userLng, s.location.lat, s.location.lng) * 10) / 10,
-      }))
-      .sort((a, b) => a.distanceKm - b.distanceKm)
-      .slice(0, parseInt(limit, 10) || 5);
+    const withDistance = uhiGatewayService.getNearbyKendras({
+      lat,
+      lng,
+      limit,
+      medicineId,
+      inStockOnly,
+      city,
+    });
 
     res.json(withDistance);
   } catch (err) {
@@ -55,13 +47,19 @@ router.get("/nearby", validateNearbyStoreQuery, async (req, res, next) => {
 /**
  * GET /api/stores/:id -> single store details
  */
-router.get("/:id", validateObjectId("id"), async (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
   try {
-    const store = await Store.findById(req.params.id).lean();
-    if (!store) {
-      return res.status(404).json({ success: false, error: "Store not found" });
+    const store = uhiGatewayService.stores.find((s) => s.id === req.params.id);
+    if (store) {
+      return res.json(store);
     }
-    res.json(store);
+
+    if (getDbStatus() && req.params.id.match(/^[0-9a-fA-F]{24}$/)) {
+      const dbStore = await Store.findById(req.params.id).lean();
+      if (dbStore) return res.json(dbStore);
+    }
+
+    return res.status(404).json({ success: false, error: "Store not found" });
   } catch (err) {
     next(err);
   }
@@ -72,6 +70,13 @@ router.get("/:id", validateObjectId("id"), async (req, res, next) => {
  */
 router.post("/", validateCreateStore, async (req, res, next) => {
   try {
+    if (!getDbStatus()) {
+      return res.status(503).json({
+        success: false,
+        error: "Database offline. Operating in Live ABDM UHI API mode.",
+      });
+    }
+
     const { name, address, city, state, pincode, phone, location } = req.body;
 
     const store = new Store({
@@ -92,52 +97,6 @@ router.post("/", validateCreateStore, async (req, res, next) => {
       success: true,
       message: "Jan Aushadhi Kendra store created successfully",
       data: saved.toJSON(),
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * PUT /api/stores/:id -> update store details
- */
-router.put("/:id", validateObjectId("id"), validateUpdateStore, async (req, res, next) => {
-  try {
-    const updates = { ...req.body };
-    delete updates._id;
-
-    const updated = await Store.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
-      runValidators: true,
-    }).lean();
-
-    if (!updated) {
-      return res.status(404).json({ success: false, error: "Store not found" });
-    }
-
-    res.json({
-      success: true,
-      message: "Store updated successfully",
-      data: updated,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * DELETE /api/stores/:id -> delete store
- */
-router.delete("/:id", validateObjectId("id"), async (req, res, next) => {
-  try {
-    const deleted = await Store.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: "Store not found" });
-    }
-
-    res.json({
-      success: true,
-      message: `Store '${deleted.name}' deleted successfully`,
     });
   } catch (err) {
     next(err);

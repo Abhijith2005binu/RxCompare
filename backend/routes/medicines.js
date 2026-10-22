@@ -1,32 +1,47 @@
 const express = require("express");
 const router = express.Router();
+const uhiGatewayService = require("../services/uhiGatewayService");
 const Medicine = require("../models/Medicine");
+const { getDbStatus } = require("../config/db");
 const {
-  validateObjectId,
   validateCreateMedicine,
   validateUpdateMedicine,
 } = require("../middleware/validate");
 
 /**
  * GET /api/medicines/search?q=crocin
- * Case-insensitive partial match across genericName, searchKeywords (brand
- * names), and composition — this is what lets a user type a BRANDED name
- * ("Crocin") and land on its generic equivalent.
+ * Case-insensitive query using ABDM / UHI Jan Aushadhi Gateway protocol (JANAUSHADHI_MEDICINE intent).
+ * Allows users to type branded names ("Crocin", "Storvas", "Glycomet") or generic molecules
+ * to receive complete purchase information, pack sizes, and branded savings.
  */
 router.get("/search", async (req, res, next) => {
   try {
     const q = (req.query.q || "").trim();
     if (!q) return res.json([]);
 
-    const regex = new RegExp(q, "i");
-    const results = await Medicine.find({
-      $or: [
-        { genericName: regex },
-        { searchKeywords: regex },
-        { composition: regex },
-        { "brandedEquivalents.brandName": regex },
-      ],
-    }).limit(20);
+    // Query live ABDM / UHI Jan Aushadhi Gateway Service
+    let results = await uhiGatewayService.searchMedicines(q);
+
+    // If local DB is connected and returned nothing from UHI, check local DB as well
+    if (results.length === 0 && getDbStatus()) {
+      try {
+        const regex = new RegExp(q, "i");
+        const dbResults = await Medicine.find({
+          $or: [
+            { genericName: regex },
+            { searchKeywords: regex },
+            { composition: regex },
+            { "brandedEquivalents.brandName": regex },
+          ],
+        }).limit(20);
+
+        if (dbResults && dbResults.length > 0) {
+          results = dbResults;
+        }
+      } catch (dbErr) {
+        // Continue with UHI results
+      }
+    }
 
     res.json(results);
   } catch (err) {
@@ -36,12 +51,47 @@ router.get("/search", async (req, res, next) => {
 
 /**
  * GET /api/medicines
- * Full catalog (for browsing / demo without search)
+ * Complete Jan Aushadhi generic catalog with purchase info
  */
 router.get("/", async (_req, res, next) => {
   try {
-    const all = await Medicine.find().sort({ genericName: 1 });
-    res.json(all);
+    const results = uhiGatewayService.getAllMedicines();
+    res.json(results);
+  } catch (err) {
+    next(err);
+  }
+});
+
+/**
+ * GET /api/medicines/:id/kendras?lat=19.0&lng=72.8&inStockOnly=true&limit=10
+ * Official ABDM UHI JANAUSHADHI_KENDRA flow:
+ * Discovers all Jan Aushadhi Kendras stocking this specific medicine,
+ * with real-time in-stock flags, units available, distance, phone, and navigation.
+ */
+router.get("/:id/kendras", async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { lat, lng, inStockOnly, limit, city } = req.query;
+
+    const kendras = uhiGatewayService.getKendrasForMedicine(id, {
+      lat,
+      lng,
+      inStockOnly,
+      limit,
+      city,
+    });
+
+    const medicine = uhiGatewayService.getMedicineById(id);
+
+    res.json({
+      success: true,
+      medicineId: id,
+      medicineName: medicine ? medicine.genericName : null,
+      genericMrp: medicine ? medicine.genericMrp : null,
+      packSize: medicine ? medicine.packSize : null,
+      totalKendrasFound: kendras.length,
+      kendras,
+    });
   } catch (err) {
     next(err);
   }
@@ -49,15 +99,25 @@ router.get("/", async (_req, res, next) => {
 
 /**
  * GET /api/medicines/:id
- * Single medicine with full brand comparison and virtual fields
+ * Single medicine details with full purchase breakdown and branded comparison
  */
-router.get("/:id", validateObjectId("id"), async (req, res, next) => {
+router.get("/:id", async (req, res, next) => {
   try {
-    const med = await Medicine.findById(req.params.id);
-    if (!med) {
-      return res.status(404).json({ success: false, error: "Medicine not found" });
+    const { id } = req.params;
+
+    // Check UHI Service first
+    const med = uhiGatewayService.getMedicineById(id);
+    if (med) {
+      return res.json(med);
     }
-    res.json(med);
+
+    // Fallback to DB if ID is a valid MongoDB ObjectId
+    if (getDbStatus() && id.match(/^[0-9a-fA-F]{24}$/)) {
+      const dbMed = await Medicine.findById(id);
+      if (dbMed) return res.json(dbMed);
+    }
+
+    return res.status(404).json({ success: false, error: "Medicine not found" });
   } catch (err) {
     next(err);
   }
@@ -65,10 +125,17 @@ router.get("/:id", validateObjectId("id"), async (req, res, next) => {
 
 /**
  * POST /api/medicines
- * Create a new medicine entry
+ * Add custom medicine formulation
  */
 router.post("/", validateCreateMedicine, async (req, res, next) => {
   try {
+    if (!getDbStatus()) {
+      return res.status(503).json({
+        success: false,
+        error: "Database offline. Application running in Live ABDM UHI API mode.",
+      });
+    }
+
     const {
       drugCode,
       genericName,
@@ -80,7 +147,6 @@ router.post("/", validateCreateMedicine, async (req, res, next) => {
       searchKeywords = [],
     } = req.body;
 
-    // Check if drugCode already exists
     const existing = await Medicine.findOne({ drugCode: drugCode.trim() });
     if (existing) {
       return res.status(409).json({
@@ -105,58 +171,6 @@ router.post("/", validateCreateMedicine, async (req, res, next) => {
       success: true,
       message: "Medicine created successfully",
       data: saved.toJSON(),
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * PUT /api/medicines/:id
- * Update an existing medicine entry
- */
-router.put("/:id", validateObjectId("id"), validateUpdateMedicine, async (req, res, next) => {
-  try {
-    const updates = { ...req.body };
-    delete updates._id; // prevent overriding MongoDB primary key
-
-    if (updates.searchKeywords && Array.isArray(updates.searchKeywords)) {
-      updates.searchKeywords = updates.searchKeywords.map((k) => k.toLowerCase().trim());
-    }
-
-    const updated = await Medicine.findByIdAndUpdate(req.params.id, updates, {
-      new: true,
-      runValidators: true,
-    });
-
-    if (!updated) {
-      return res.status(404).json({ success: false, error: "Medicine not found" });
-    }
-
-    res.json({
-      success: true,
-      message: "Medicine updated successfully",
-      data: updated,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-/**
- * DELETE /api/medicines/:id
- * Delete a medicine entry
- */
-router.delete("/:id", validateObjectId("id"), async (req, res, next) => {
-  try {
-    const deleted = await Medicine.findByIdAndDelete(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: "Medicine not found" });
-    }
-
-    res.json({
-      success: true,
-      message: `Medicine '${deleted.genericName}' (${deleted.drugCode}) deleted successfully`,
     });
   } catch (err) {
     next(err);
