@@ -6,6 +6,7 @@ const {
   validateCreateMedicine,
   validateUpdateMedicine,
 } = require("../middleware/validate");
+const { verifyToken, requireAdmin } = require("../middleware/auth");
 
 /**
  * GET /api/medicines/search?q=crocin
@@ -65,9 +66,9 @@ router.get("/:id", validateObjectId("id"), async (req, res, next) => {
 
 /**
  * POST /api/medicines
- * Create a new medicine entry
+ * Create a new medicine entry (Admin only)
  */
-router.post("/", validateCreateMedicine, async (req, res, next) => {
+router.post("/", verifyToken, requireAdmin, validateCreateMedicine, async (req, res, next) => {
   try {
     const {
       drugCode,
@@ -113,9 +114,9 @@ router.post("/", validateCreateMedicine, async (req, res, next) => {
 
 /**
  * PUT /api/medicines/:id
- * Update an existing medicine entry
+ * Update an existing medicine entry (Admin only)
  */
-router.put("/:id", validateObjectId("id"), validateUpdateMedicine, async (req, res, next) => {
+router.put("/:id", verifyToken, requireAdmin, validateObjectId("id"), validateUpdateMedicine, async (req, res, next) => {
   try {
     const updates = { ...req.body };
     delete updates._id; // prevent overriding MongoDB primary key
@@ -145,9 +146,9 @@ router.put("/:id", validateObjectId("id"), validateUpdateMedicine, async (req, r
 
 /**
  * DELETE /api/medicines/:id
- * Delete a medicine entry
+ * Delete a medicine entry (Admin only)
  */
-router.delete("/:id", validateObjectId("id"), async (req, res, next) => {
+router.delete("/:id", verifyToken, requireAdmin, validateObjectId("id"), async (req, res, next) => {
   try {
     const deleted = await Medicine.findByIdAndDelete(req.params.id);
     if (!deleted) {

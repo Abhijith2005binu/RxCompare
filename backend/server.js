@@ -6,6 +6,7 @@ const requestLogger = require("./middleware/logger");
 const { notFoundHandler, errorHandler } = require("./middleware/errorHandler");
 const medicineRoutes = require("./routes/medicines");
 const storeRoutes = require("./routes/stores");
+const authRoutes = require("./routes/auth");
 
 const app = express();
 
@@ -24,6 +25,7 @@ app.get("/api/health", (_req, res) => {
 });
 
 // Resource Routes
+app.use("/api/auth", authRoutes);
 app.use("/api/medicines", medicineRoutes);
 app.use("/api/stores", storeRoutes);
 

@@ -8,6 +8,7 @@ const {
   validateUpdateStore,
   validateNearbyStoreQuery,
 } = require("../middleware/validate");
+const { verifyToken, requireAdmin } = require("../middleware/auth");
 
 /**
  * GET /api/stores -> full static list
@@ -68,9 +69,9 @@ router.get("/:id", validateObjectId("id"), async (req, res, next) => {
 });
 
 /**
- * POST /api/stores -> create a new Kendra store
+ * POST /api/stores -> create a new Kendra store (Admin only)
  */
-router.post("/", validateCreateStore, async (req, res, next) => {
+router.post("/", verifyToken, requireAdmin, validateCreateStore, async (req, res, next) => {
   try {
     const { name, address, city, state, pincode, phone, location } = req.body;
 
@@ -99,9 +100,9 @@ router.post("/", validateCreateStore, async (req, res, next) => {
 });
 
 /**
- * PUT /api/stores/:id -> update store details
+ * PUT /api/stores/:id -> update store details (Admin only)
  */
-router.put("/:id", validateObjectId("id"), validateUpdateStore, async (req, res, next) => {
+router.put("/:id", verifyToken, requireAdmin, validateObjectId("id"), validateUpdateStore, async (req, res, next) => {
   try {
     const updates = { ...req.body };
     delete updates._id;
@@ -126,9 +127,9 @@ router.put("/:id", validateObjectId("id"), validateUpdateStore, async (req, res,
 });
 
 /**
- * DELETE /api/stores/:id -> delete store
+ * DELETE /api/stores/:id -> delete store (Admin only)
  */
-router.delete("/:id", validateObjectId("id"), async (req, res, next) => {
+router.delete("/:id", verifyToken, requireAdmin, validateObjectId("id"), async (req, res, next) => {
   try {
     const deleted = await Store.findByIdAndDelete(req.params.id);
     if (!deleted) {

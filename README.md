@@ -51,9 +51,23 @@ npm run dev
 
 ---
 
-## REST API Documentation (Full CRUD)
+### Authentication & Cabinet Resource (`/api/auth`)
 
-All endpoints follow standard HTTP status codes (`200 OK`, `201 Created`, `400 Bad Request`, `404 Not Found`, `409 Conflict`, `500 Internal Server Error`).
+| Method | Endpoint | Description | Status Codes |
+|---|---|---|---|
+| `POST` | `/api/auth/register` | Register new user or admin account | `201`, `400`, `409` |
+| `POST` | `/api/auth/login` | Authenticate with email & password, returns JWT | `200`, `400`, `401` |
+| `POST` | `/api/auth/quick-demo` | Instant 1-click test login (`admin` or `user`) | `200` |
+| `GET` | `/api/auth/me` | Fetch active user profile and cabinet (Bearer token) | `200`, `401` |
+| `GET` | `/api/auth/saved-medicines` | Retrieve user's saved prescription list | `200`, `401` |
+| `POST` | `/api/auth/saved-medicines/:id` | Toggle/save medicine to personal cabinet | `200`, `401`, `404` |
+| `DELETE` | `/api/auth/saved-medicines/:id` | Remove medicine from cabinet | `200`, `401`, `404` |
+
+> **Default Seed Credentials:**
+> - **Admin:** `admin@rxcompare.org` / `Admin@123` (Full catalog CRUD & Kendra store management)
+> - **Patient:** `patient@rxcompare.org` / `Patient@123` (Personal medicine cabinet & savings tracking)
+
+---
 
 ### Medicines Resource (`/api/medicines`)
 
