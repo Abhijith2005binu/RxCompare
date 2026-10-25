@@ -5,6 +5,7 @@ let isConnected = false;
 async function connectDB() {
   const uri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/rxcompare";
   try {
+    mongoose.set("bufferCommands", false);
     // Attempt connection with a short timeout so boot is fast if DB is offline
     await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
     isConnected = true;

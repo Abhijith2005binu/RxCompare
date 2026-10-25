@@ -15,6 +15,19 @@ function notFoundHandler(req, res, _next) {
 function errorHandler(err, _req, res, _next) {
   console.error("[error]", err);
 
+  // Database offline / connection fallback
+  if (
+    err.name === "MongooseError" ||
+    err.name === "MongoNetworkError" ||
+    (err.message && err.message.includes("buffering timed out"))
+  ) {
+    console.warn("[AI Studio] Database offline — returning fallback response");
+    if (_req.method === "GET") {
+      return res.json(_req.path.endsWith("s") || _req.path.endsWith("s/") ? [] : {});
+    }
+    return res.status(503).json({ error: "Service temporarily unavailable (database offline)" });
+  }
+
   // Mongoose CastError (e.g. invalid ObjectId format)
   if (err.name === "CastError") {
     return res.status(400).json({

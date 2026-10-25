@@ -8,12 +8,17 @@ const medicineRoutes = require("./routes/medicines");
 const storeRoutes = require("./routes/stores");
 const dashboardRoutes = require("./routes/dashboard");
 
+const path = require("path");
+
 const app = express();
 
 // Core Middleware
 app.use(cors());
 app.use(express.json());
 app.use(requestLogger);
+
+const frontendDist = path.join(__dirname, "../frontend/dist");
+app.use(express.static(frontendDist));
 
 const uhiGatewayService = require("./services/uhiGatewayService");
 const { getDbStatus } = require("./config/db");
@@ -42,14 +47,25 @@ app.use("/api/medicines", medicineRoutes);
 app.use("/api/stores", storeRoutes);
 app.use("/api", dashboardRoutes);
 
+// SPA fallback for non-API routes
+app.get("*", (req, res, next) => {
+  if (req.path.startsWith("/api")) {
+    return next();
+  }
+  res.sendFile(path.join(frontendDist, "index.html"), (err) => {
+    if (err) next();
+  });
+});
+
 // Fallback & Error Handling Middleware (must be registered after routes)
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
+const HOST = "0.0.0.0";
 
 connectDB().then(() => {
-  app.listen(PORT, () =>
-    console.log(`[server] RxCompare API running at http://localhost:${PORT}`)
+  app.listen(PORT, HOST, () =>
+    console.log(`[server] RxCompare API running at http://${HOST}:${PORT}`)
   );
 }); 

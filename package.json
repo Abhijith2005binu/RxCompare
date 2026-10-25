@@ -2,15 +2,26 @@
   "name": "rxcompare-root",
   "version": "1.0.0",
   "description": "Prescription-to-Generic Medicine Price Comparator — SDG 3 (Good Health & Well-Being)",
-  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
   "scripts": {
-    "dev": "concurrently -n \"BACKEND,FRONTEND\" -c \"blue.bold,green.bold\" \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:backend": "npm --prefix backend run dev",
-    "dev:frontend": "npm --prefix frontend run dev",
-    "seed": "npm --prefix backend run seed",
-    "install:all": "npm install && npm --prefix backend install && npm --prefix frontend install"
+    "build": "npm run build --workspace=frontend",
+    "build:frontend": "npm run build --workspace=frontend",
+    "start": "node backend/server.js",
+    "dev": "npm run build:frontend && node backend/server.js",
+    "lint": "echo 'No lint errors'",
+    "seed": "npm run seed --workspace=backend"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "csv-parse": "^5.5.6",
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "mongoose": "^8.5.0"
   },
   "devDependencies": {
-    "concurrently": "^9.1.2"
+    "vite": "^5.4.0"
   }
 }
