@@ -92,6 +92,38 @@ const btnOpenCart = document.getElementById("btn-open-cart");
 const cartCountBadge = document.getElementById("cart-count-badge");
 const tabSearchText = document.getElementById("tab-search-text");
 
+// Theme Toggle (Light / Dark mode)
+const btnThemeToggle = document.getElementById("btn-theme-toggle");
+const themeIconMoon = document.querySelector(".theme-icon--moon");
+const themeIconSun = document.querySelector(".theme-icon--sun");
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute("data-theme", theme);
+  localStorage.setItem("rxcompare_theme", theme);
+  if (themeIconMoon && themeIconSun) {
+    if (theme === "dark") {
+      themeIconMoon.style.display = "none";
+      themeIconSun.style.display = "block";
+    } else {
+      themeIconMoon.style.display = "block";
+      themeIconSun.style.display = "none";
+    }
+  }
+}
+
+const savedTheme = localStorage.getItem("rxcompare_theme") ||
+  (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+applyTheme(savedTheme);
+
+if (btnThemeToggle) {
+  btnThemeToggle.addEventListener("click", () => {
+    const currentTheme = document.documentElement.getAttribute("data-theme") || "light";
+    const nextTheme = currentTheme === "dark" ? "light" : "dark";
+    applyTheme(nextTheme);
+    showToast(`Switched to ${nextTheme === "dark" ? "Dark" : "Light"} theme`, nextTheme === "dark" ? "🌙" : "☀️");
+  });
+}
+
 const navTabs = document.querySelectorAll(".nav__tab");
 const viewPanels = document.querySelectorAll(".view-panel");
 
@@ -124,6 +156,7 @@ const receiptOrderId = document.getElementById("receipt-order-id");
 const receiptAmount = document.getElementById("receipt-amount");
 const receiptKendra = document.getElementById("receipt-kendra");
 const btnViewOrderStatus = document.getElementById("btn-view-order-status");
+const btnClosePaymentReceipt = document.getElementById("btn-close-payment-receipt");
 
 const alertModalBackdrop = document.getElementById("alert-modal-backdrop");
 const addProductModalBackdrop = document.getElementById("add-product-modal-backdrop");
@@ -550,6 +583,14 @@ btnProceedPayment.addEventListener("click", () => {
 // ---------------------------------------------------------------------
 // Interactive Payment Simulation Workflow
 // ---------------------------------------------------------------------
+function closePaymentModal() {
+  paymentModalBackdrop.hidden = true;
+  const pm = document.getElementById("payment-modal");
+  if (pm) pm.hidden = true;
+  btnRunPaymentSim.disabled = false;
+  btnRunPaymentSim.textContent = "Authorize & Simulate Instant Payment";
+}
+
 function openPaymentSimulationModal(orderPayload) {
   checkoutOrderData = orderPayload;
 
@@ -557,6 +598,17 @@ function openPaymentSimulationModal(orderPayload) {
   posKendraName.textContent = orderPayload.kendraName;
   posTotalAmount.textContent = `₹${orderPayload.totalAmount.toFixed(2)}`;
   payDeliveryAddress.value = currentUser.address || "B-402, Green Glen Residences, Bellandur, Bengaluru - 560103";
+
+  // Reset payment channel selection to UPI by default
+  document.querySelectorAll(".pay-method-card").forEach((c) => c.classList.remove("is-selected"));
+  const defaultOption = document.querySelector('input[name="paymentSimulationOption"][value="UPI"]');
+  if (defaultOption) {
+    defaultOption.checked = true;
+    defaultOption.closest(".pay-method-card")?.classList.add("is-selected");
+  }
+
+  btnRunPaymentSim.disabled = false;
+  btnRunPaymentSim.textContent = "Authorize & Simulate Instant Payment";
 
   paymentSelectionStep.style.display = "block";
   paymentProgressStep.style.display = "none";
@@ -566,7 +618,7 @@ function openPaymentSimulationModal(orderPayload) {
   if (pm) pm.hidden = false;
 }
 
-// Payment method card selection highlight
+// Payment method card selection highlight & radio binding
 document.querySelectorAll(".pay-method-card").forEach((card) => {
   card.addEventListener("click", () => {
     document.querySelectorAll(".pay-method-card").forEach((c) => c.classList.remove("is-selected"));
@@ -576,22 +628,28 @@ document.querySelectorAll(".pay-method-card").forEach((card) => {
   });
 });
 
-btnClosePaymentModal.addEventListener("click", () => {
-  paymentModalBackdrop.hidden = true;
-  const pm = document.getElementById("payment-modal");
-  if (pm) pm.hidden = true;
+document.querySelectorAll('input[name="paymentSimulationOption"]').forEach((radio) => {
+  radio.addEventListener("change", () => {
+    document.querySelectorAll(".pay-method-card").forEach((c) => c.classList.remove("is-selected"));
+    radio.closest(".pay-method-card")?.classList.add("is-selected");
+  });
 });
-btnCancelPayment.addEventListener("click", () => {
-  paymentModalBackdrop.hidden = true;
-  const pm = document.getElementById("payment-modal");
-  if (pm) pm.hidden = true;
-});
+
+btnClosePaymentModal.addEventListener("click", closePaymentModal);
+btnCancelPayment.addEventListener("click", closePaymentModal);
+if (btnClosePaymentReceipt) {
+  btnClosePaymentReceipt.addEventListener("click", closePaymentModal);
+}
+paymentModalBackdrop.addEventListener("click", closePaymentModal);
 
 btnRunPaymentSim.addEventListener("click", async () => {
   if (!checkoutOrderData) return;
 
   const selectedMethod = document.querySelector('input[name="paymentSimulationOption"]:checked')?.value || "UPI";
   const address = payDeliveryAddress.value.trim() || currentUser.address || "Counter Pickup";
+
+  btnRunPaymentSim.disabled = true;
+  btnRunPaymentSim.textContent = "Processing Simulation…";
 
   // Step 1 -> Transition to Live Animated Simulation
   paymentSelectionStep.style.display = "none";
@@ -645,19 +703,21 @@ btnRunPaymentSim.addEventListener("click", async () => {
         receiptOrderId.textContent = `#${orderRes.order.id}`;
         receiptAmount.textContent = `₹${orderRes.order.totalAmount.toFixed(2)}`;
         receiptKendra.textContent = orderRes.order.kendraName;
+
+        showToast(`Order #${orderRes.order.id} registered on PMBJP network!`, "✓");
       } catch (err) {
-        alert(`Order placement error: ${err.message}`);
+        showToast(`Order placement error: ${err.message}`, "⚠️");
+        btnRunPaymentSim.disabled = false;
+        btnRunPaymentSim.textContent = "Authorize & Simulate Instant Payment";
         paymentProgressStep.style.display = "none";
         paymentSelectionStep.style.display = "block";
       }
-    }, 700);
-  }, 750);
+    }, 650);
+  }, 650);
 });
 
 btnViewOrderStatus.addEventListener("click", () => {
-  paymentModalBackdrop.hidden = true;
-  const pm = document.getElementById("payment-modal");
-  if (pm) pm.hidden = true;
+  closePaymentModal();
   switchView("customer");
 });
 
@@ -987,14 +1047,6 @@ async function handleSearch(query) {
       <span class="search-btn-text">Compare &amp; Find Kendra</span>`;
   }
 }
-
-// Promo card quick-filter buttons
-document.querySelectorAll(".promo-card__btn").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    const cat = btn.dataset.category;
-    applyCategoryFilter(cat);
-  });
-});
 
 // Service pills
 document.querySelectorAll(".service-pill").forEach((pill) => {

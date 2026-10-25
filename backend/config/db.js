@@ -3,7 +3,12 @@ const mongoose = require("mongoose");
 let isConnected = false;
 
 async function connectDB() {
-  const uri = process.env.MONGO_URI || "mongodb://127.0.0.1:27017/rxcompare";
+  const uri = process.env.MONGO_URI;
+  if (!uri) {
+    isConnected = false;
+    console.log("[db] MONGO_URI not configured -> Running on in-memory ABDM / UHI Gateway Engine");
+    return;
+  }
   try {
     mongoose.set("bufferCommands", false);
     // Attempt connection with a short timeout so boot is fast if DB is offline
@@ -12,7 +17,7 @@ async function connectDB() {
     console.log(`[db] connected -> ${uri}`);
   } catch (err) {
     isConnected = false;
-    console.log(`[db] local database offline (${err.message}) -> Running on live ABDM / UHI Gateway Engine`);
+    console.log(`[db] database offline (${err.message}) -> Running on in-memory ABDM / UHI Gateway Engine`);
   }
 }
 

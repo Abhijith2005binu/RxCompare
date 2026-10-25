@@ -100,10 +100,23 @@
 
         <!-- Right Action Controls -->
         <div class="nav__right">
-          <!-- Wishlist/Heart (Aesthetic affordance matching reference) -->
-          <button type="button" class="btn-icon-nav" id="btn-nav-wishlist" title="Saved Formulations">
-            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          <!-- Theme Toggle (Light / Dark mode) -->
+          <button type="button" class="btn-icon-nav" id="btn-theme-toggle" title="Switch Theme (Light / Dark)" aria-label="Toggle Theme">
+            <!-- Moon icon (for light mode) -->
+            <svg class="theme-icon theme-icon--moon" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+            <!-- Sun icon (for dark mode) -->
+            <svg class="theme-icon theme-icon--sun" viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" style="display: none;">
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
             </svg>
           </button>
 
@@ -290,63 +303,47 @@
         </div>
       </section>
 
-      <!-- 4 PROMOTIONAL PASTEL BANNERS (Matching reference mockup) -->
+      <!-- 4 FEATURE SHOWCASE WIDGETS -->
       <section class="promo-grid-section">
         <div class="promo-grid">
-          <!-- Promo 1: Blue -->
+          <!-- Feature 1: Blue -->
           <div class="promo-card promo-card--blue">
             <div class="promo-card__body">
               <span class="promo-card__eyebrow">GET AT YOUR KENDRA</span>
               <h3 class="promo-card__heading">Medication at<br />One Place</h3>
-              <button type="button" class="promo-card__btn" data-category="All">
-                <span>Shop Now</span>
-                <span class="promo-card__arrow">›</span>
-              </button>
             </div>
             <div class="promo-card__img-wrap">
               <img src="/assets/images/promo_medication.jpg" alt="Medication Packages" class="promo-card__img" />
             </div>
           </div>
 
-          <!-- Promo 2: Pink -->
+          <!-- Feature 2: Pink -->
           <div class="promo-card promo-card--pink">
             <div class="promo-card__body">
               <span class="promo-card__eyebrow">UP TO 90% OFF</span>
               <h3 class="promo-card__heading">Naturally<br />Good</h3>
-              <button type="button" class="promo-card__btn" data-category="Vitamins">
-                <span>Compare Now</span>
-                <span class="promo-card__arrow">›</span>
-              </button>
             </div>
             <div class="promo-card__img-wrap">
               <img src="/assets/images/promo_supplements.jpg" alt="Natural Supplements" class="promo-card__img" />
             </div>
           </div>
 
-          <!-- Promo 3: Green -->
+          <!-- Feature 3: Green -->
           <div class="promo-card promo-card--green">
             <div class="promo-card__body">
               <span class="promo-card__eyebrow">WHO-GMP CERTIFIED</span>
               <h3 class="promo-card__heading">Quality Assured<br />Products</h3>
-              <button type="button" class="promo-card__btn" data-category="Antibiotic">
-                <span>Shop Now</span>
-                <span class="promo-card__arrow">›</span>
-              </button>
             </div>
             <div class="promo-card__img-wrap">
               <img src="/assets/images/promo_wellness.jpg" alt="Certified Care Products" class="promo-card__img" />
             </div>
           </div>
 
-          <!-- Promo 4: Yellow -->
+          <!-- Feature 4: Yellow -->
           <div class="promo-card promo-card--yellow">
             <div class="promo-card__body">
               <span class="promo-card__eyebrow">UP TO 85% OFF</span>
               <h3 class="promo-card__heading">Medicines<br />Popularly</h3>
-              <button type="button" class="promo-card__btn" data-category="Analgesic">
-                <span>Shop Now</span>
-                <span class="promo-card__arrow">›</span>
-              </button>
             </div>
             <div class="promo-card__img-wrap">
               <img src="/assets/images/promo_supplements.jpg" alt="Popular Medicines" class="promo-card__img" />
@@ -848,111 +845,16 @@
 
   <!-- Instant Order & Payment Simulator Modal -->
   <div id="payment-modal-backdrop" class="modal-backdrop" hidden></div>
-  <div id="payment-modal" class="modal" hidden>
+  <div id="payment-modal" class="modal modal--payment" hidden role="dialog" aria-modal="true" aria-labelledby="payment-modal-title">
     <div class="modal__header">
-      <div>
-        <span class="badge badge--otc">ABDM Jan Aushadhi Payment Gateway</span>
-        <h3 class="modal__title">Simulated Prescription Order</h3>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <span class="pay-lock-icon">🔒</span>
+        <h3 class="modal__title" id="payment-modal-title">ABDM Jan Aushadhi Payment Gateway</h3>
       </div>
       <button type="button" id="btn-close-payment-modal" class="modal__close" aria-label="Close">&times;</button>
     </div>
-  <!-- INTERACTIVE PAYMENT SIMULATION MODAL -->
-  <div id="payment-modal-backdrop" class="modal-backdrop" hidden>
-    <div class="modal modal--payment" role="dialog" aria-modal="true">
-      <div class="modal__header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="pay-lock-icon">🔒</span>
-          <h3 class="modal__title">Payment Gateway</h3>
-        </div>
-        <button type="button" class="modal__close" id="btn-close-payment-modal">&times;</button>
-      </div>
 
-      <div class="modal__body" id="payment-modal-content">
-        <!-- Step 1: Payment Method Selection -->
-        <div id="payment-selection-step">
-          <div class="payment-order-summary">
-            <div class="pos-row">
-              <span class="pos-label">Recipient:</span>
-              <strong id="pos-customer-name">—</strong>
-            </div>
-            <div class="pos-row">
-              <span class="pos-label">Fulfilling Kendra:</span>
-              <strong id="pos-kendra-name">—</strong>
-            </div>
-            <div class="pos-row">
-              <span class="pos-label">Total Subsidized Amount:</span>
-              <strong id="pos-total-amount" class="text-emerald" style="font-size: 1.25rem;">₹0.00</strong>
-            </div>
-          </div>
-
-          <p class="modal-desc" style="margin-top: 10px;">Select a simulated payment method to complete your generic
-            medicine order:</p>
-
-          <div class="payment-methods-grid">
-            <!-- Method 1: UPI -->
-            <label class="pay-method-card is-selected">
-              <input type="radio" name="paymentSimulationOption" value="UPI" checked />
-              <div class="pay-method-content">
-                <div class="pay-method-title">
-                  <span>⚡ UPI Instant Pay </span>
-                </div>
-                <p class="pay-method-sub">Instant zero-fee generic medicine subsidy clearance</p>
-
-                <div class="upi-sim-qr-box">
-                  <div class="upi-qr-graphic">
-                    <div class="qr-pattern"></div>
-                  </div>
-                  <div class="upi-qr-details">
-                    <span class="upi-vpa">VPA: <strong>pmbjp.janaushadhi@sbi</strong></span>
-                    <span class="upi-tag">PMBJP Certified Merchant</span>
-                  </div>
-                </div>
-              </div>
-            </label>
-
-            <!-- Method 2: Card / Net Banking -->
-            <label class="pay-method-card">
-              <input type="radio" name="paymentSimulationOption" value="Card" />
-              <div class="pay-method-content">
-                <div class="pay-method-title">
-                  <span>💳 RuPay / Debit Card / Net Banking</span>
-                </div>
-                <p class="pay-method-sub">Simulate RBI OTP verification with mock RuPay card</p>
-                <div class="mock-card-preview">
-                  <span>RuPay Card •••• 4022</span>
-                  <span class="text-emerald">Validated</span>
-                </div>
-              </div>
-            </label>
-
-            <!-- Method 3: COD -->
-            <label class="pay-method-card">
-              <input type="radio" name="paymentSimulationOption" value="Cash" />
-              <div class="pay-method-content">
-                <div class="pay-method-title">
-                  <span>💵 Pay on Delivery / Counter Pickup</span>
-                </div>
-                <p class="pay-method-sub">Pay directly with cash or UPI at delivery doorstep or Kendra counter</p>
-              </div>
-            </label>
-          </div>
-
-          <!-- Customer Details Form Fields (if not already filled) -->
-          <div class="form-group" style="margin-top: 12px;">
-            <label>Delivery Address</label>
-            <input type="text" id="pay-delivery-address" class="form-input"
-              placeholder="House/Flat No, Landmark, City, Pincode" />
-          </div>
-
-          <div class="modal__actions" style="margin-top: 16px;">
-            <button type="button" class="btn btn--outline" id="btn-cancel-payment">Cancel</button>
-            <button type="button" class="btn btn--primary btn--large" id="btn-run-payment-sim">
-              Pay Now &rarr;
-            </button>
-          </div>
-        </div>
-
-    <div class="modal__body">
+    <div class="modal__body" id="payment-modal-content">
       <!-- Order Quick Summary -->
       <div class="order-summary-box">
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
@@ -971,31 +873,31 @@
       <!-- Step 1: Method & Address Selection -->
       <div id="payment-selection-step">
         <div class="form-group">
-          <label>Delivery / Dispensing Address *</label>
+          <label for="pay-delivery-address">Delivery / Dispensing Address *</label>
           <input type="text" id="pay-delivery-address" class="form-input" placeholder="Enter delivery address or 'Kendra Counter Pickup'" value="B-402, Green Glen Residences, Bellandur, Bengaluru - 560103" />
         </div>
 
-        <label class="payment-method-label">Select Simulation Payment Channel:</label>
+        <label class="payment-method-label" style="display: block; font-weight: 700; font-size: 0.85rem; margin: 12px 0 6px;">Select Simulation Payment Channel:</label>
         <div class="payment-methods-grid">
           <label class="pay-radio pay-method-card is-selected">
             <input type="radio" name="paymentSimulationOption" value="UPI" checked />
             <span class="pay-radio__card">
-              <strong>UPI Sandbox (NPCI / BHIM / GPay / PhonePe)</strong>
-              <small>Simulates instant zero-surcharge ABDM digital payment</small>
+              <strong style="display: flex; align-items: center; gap: 6px;">⚡ UPI Sandbox (NPCI / BHIM / GPay / PhonePe)</strong>
+              <small>Simulates instant zero-surcharge ABDM digital payment with instant subsidy authorization</small>
             </span>
           </label>
           <label class="pay-radio pay-method-card">
             <input type="radio" name="paymentSimulationOption" value="Card" />
             <span class="pay-radio__card">
-              <strong>RuPay / Debit Card Counter Gateway</strong>
-              <small>Subsidized merchant discount rate (MDR zero)</small>
+              <strong style="display: flex; align-items: center; gap: 6px;">💳 RuPay / Debit Card Counter Gateway</strong>
+              <small>Subsidized merchant discount rate (MDR zero) &amp; RBI sandbox validation</small>
             </span>
           </label>
           <label class="pay-radio pay-method-card">
             <input type="radio" name="paymentSimulationOption" value="Cash" />
             <span class="pay-radio__card">
-              <strong>Pay at Jan Aushadhi Kendra Counter</strong>
-              <small>Hold inventory stock &amp; pay in cash on collection</small>
+              <strong style="display: flex; align-items: center; gap: 6px;">💵 Pay at Jan Aushadhi Kendra Counter</strong>
+              <small>Hold inventory stock &amp; pay in cash / UPI on doorstep or collection</small>
             </span>
           </label>
         </div>
@@ -1045,20 +947,17 @@
             <span id="receipt-amount">₹0.00</span>
           </div>
         </div>
-        <div class="form-group">
-          <label>Branded Market Equivalent (Name, Manufacturer, MRP)</label>
-          <input type="text" name="brandedNote" placeholder="e.g. Calpol 500 - GSK - ₹32.00" class="form-input" />
-        </div>
 
-        <button type="button" class="btn btn--primary full-width" id="btn-view-order-status">
-          View Order in My Account &amp; Track Status
-        </button>
+        <div style="display: flex; gap: 10px;">
+          <button type="button" class="btn btn--outline" id="btn-close-payment-receipt" style="flex: 1;">Close</button>
+          <button type="button" class="btn btn--primary" id="btn-view-order-status" style="flex: 2;">
+            Track Order in My Account &rarr;
+          </button>
+        </div>
       </div>
     </div>
   </div>
-  </div>
-  </div>
-  </div>
+
 
   <!-- Persona Switcher Modal -->
   <div id="persona-modal-backdrop" class="modal-backdrop" hidden></div>

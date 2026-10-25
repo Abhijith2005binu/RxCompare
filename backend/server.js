@@ -61,11 +61,12 @@ app.get("*", (req, res, next) => {
 app.use(notFoundHandler);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 3000;
 const HOST = "0.0.0.0";
 
-connectDB().then(() => {
-  app.listen(PORT, HOST, () =>
-    console.log(`[server] RxCompare API running at http://${HOST}:${PORT}`)
-  );
-}); 
+app.listen(PORT, HOST, () => {
+  console.log(`[server] RxCompare API running at http://${HOST}:${PORT}`);
+  connectDB().catch((err) => {
+    console.warn(`[db] Connection attempt finished: ${err?.message}`);
+  });
+});
