@@ -149,8 +149,22 @@
     <!-- VIEW 1: Customer Medicine Search & Price Comparator -->
     <section id="view-search" class="view-panel is-active">
       <!-- HERO SECTION (Matching Sky Blue Gradient & Floating Elements in Reference) -->
-      <section class="hero">
-        <div class="hero__backdrop-image" style="background-image: url('/assets/images/hero_banner.jpg');"></div>
+      <section class="hero" id="hero-section">
+        <!-- Background Image Slider -->
+        <div class="hero__slider" id="hero-slider" aria-hidden="true">
+          <div class="hero__slide is-active" style="background-image: url('/assets/images/hero_banner.jpg');" data-index="0"></div>
+          <div class="hero__slide" style="background-image: url('/assets/images/jan_aushadhi_kendra_shelves.png');" data-index="1"></div>
+          <div class="hero__slide" style="background-image: url('/assets/images/promo_wellness.jpg');" data-index="2"></div>
+        </div>
+
+        <!-- Slider Arrow Navigation -->
+        <button type="button" class="hero-arrow hero-arrow--prev" id="hero-arrow-prev" aria-label="Previous background slide">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <button type="button" class="hero-arrow hero-arrow--next" id="hero-arrow-next" aria-label="Next background slide">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+
         <div class="hero__inner">
           <h1 class="hero__title">Affordable Quality<br />Generic Medicines</h1>
 
@@ -198,11 +212,11 @@
             <button type="button" class="btn-hero-dark" id="btn-hero-compare">Check More</button>
           </div>
 
-          <!-- Carousel Dots (3 dots matching reference) -->
-          <div class="hero__dots">
-            <span class="hero__dot is-active"></span>
-            <span class="hero__dot"></span>
-            <span class="hero__dot"></span>
+          <!-- Carousel Dots -->
+          <div class="hero__dots" id="hero-slider-dots">
+            <button type="button" class="hero__dot is-active" data-index="0" aria-label="Slide 1"></button>
+            <button type="button" class="hero__dot" data-index="1" aria-label="Slide 2"></button>
+            <button type="button" class="hero__dot" data-index="2" aria-label="Slide 3"></button>
           </div>
 
           <!-- Quick Search Tags -->

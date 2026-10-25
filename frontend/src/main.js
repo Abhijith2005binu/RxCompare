@@ -127,6 +127,11 @@ if (btnThemeToggle) {
 const navTabs = document.querySelectorAll(".nav__tab");
 const viewPanels = document.querySelectorAll(".view-panel");
 
+const tabSearch = document.getElementById("tab-search");
+const tabCustomer = document.getElementById("tab-customer");
+const tabKendra = document.getElementById("tab-kendra");
+const tabAdmin = document.getElementById("tab-admin");
+
 // Modals & Drawers
 const cartDrawer = document.getElementById("cart-drawer");
 const cartDrawerBackdrop = document.getElementById("cart-drawer-backdrop");
@@ -261,23 +266,51 @@ function updateRoleUI() {
     userDisplayRole.style.background = "#fae4df";
     userDisplayRole.style.color = "#a42c16";
     tabSearchText.textContent = "Medicine Catalog";
+
+    // Admin login: keep BOTH Kendra Management Portal and Admin Portal
+    if (tabCustomer) tabCustomer.style.display = "";
+    if (tabKendra) tabKendra.style.display = "";
+    if (tabAdmin) tabAdmin.style.display = "";
+    if (btnOpenCart) btnOpenCart.style.display = "";
   } else if (currentUser.role === "kendra_owner") {
     userDisplayRole.textContent = "Kendra Owner";
     userDisplayRole.style.background = "#e6f6ee";
     userDisplayRole.style.color = "#167a52";
     tabSearchText.textContent = "Medicine Catalog";
+
+    // Kendra Owner login: keep ONLY Kendra Management Portal (remove Admin Portal)
+    if (tabCustomer) tabCustomer.style.display = "none";
+    if (tabKendra) tabKendra.style.display = "";
+    if (tabAdmin) tabAdmin.style.display = "none";
+    if (btnOpenCart) btnOpenCart.style.display = "none";
+
+    // Guard: redirect away from unauthorized view
+    if (activeView === "admin" || activeView === "customer") {
+      switchView("kendra");
+    }
   } else {
     userDisplayRole.textContent = "Customer";
     userDisplayRole.style.background = "#eaf1fb";
     userDisplayRole.style.color = "#1c529e";
     tabSearchText.textContent = "Find Medicines";
+
+    // Customer login: remove BOTH Kendra Management Portal and Admin Portal
+    if (tabCustomer) tabCustomer.style.display = "";
+    if (tabKendra) tabKendra.style.display = "none";
+    if (tabAdmin) tabAdmin.style.display = "none";
+    if (btnOpenCart) btnOpenCart.style.display = "";
+
+    // Guard: redirect away from unauthorized view
+    if (activeView === "kendra" || activeView === "admin") {
+      switchView("search");
+    }
   }
 
   // Pre-fill fields
-  alertCustomerName.value = currentUser.name;
-  alertCustomerEmail.value = currentUser.email;
-  alertCustomerPhone.value = currentUser.phone || "";
-  payDeliveryAddress.value = currentUser.address || "";
+  if (alertCustomerName) alertCustomerName.value = currentUser.name;
+  if (alertCustomerEmail) alertCustomerEmail.value = currentUser.email;
+  if (alertCustomerPhone) alertCustomerPhone.value = currentUser.phone || "";
+  if (payDeliveryAddress) payDeliveryAddress.value = currentUser.address || "";
 }
 
 const DEMO_PERSONAS = {
@@ -337,31 +370,30 @@ function switchUser(user) {
   if (pm) pm.hidden = true;
 
   if (currentUser.role === "admin") {
+    showToast("Logged in as Admin: Both Kendra & Admin portals unlocked", "🛡️");
     switchView("admin");
   } else if (currentUser.role === "kendra_owner") {
+    showToast("Logged in as Kendra Owner: Kendra Management Portal unlocked", "🏥");
     switchView("kendra");
   } else {
+    showToast("Logged in as Customer: Find Medicines & Orders portal active", "👤");
     switchView("search");
   }
 }
 
 function switchView(viewName) {
-  // Ensure the appropriate role persona is active when switching view tabs
-  if (viewName === "kendra" && currentUser.role !== "kendra_owner") {
-    currentUser = DEMO_PERSONAS.kendra;
-    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
-    updateRoleUI();
-    showToast("Active Persona: Sunil Deshmukh (Kendra Owner)", "🏥");
-  } else if (viewName === "admin" && currentUser.role !== "admin") {
-    currentUser = DEMO_PERSONAS.admin;
-    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
-    updateRoleUI();
-    showToast("Active Persona: Dr. Rajesh Varma (Admin)", "🛡️");
-  } else if (viewName === "customer" && currentUser.role !== "customer") {
-    currentUser = DEMO_PERSONAS.customer;
-    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
-    updateRoleUI();
-    showToast("Active Persona: Ramesh Sharma (Customer)", "👤");
+  // Enforce role-based access control
+  if (currentUser.role === "customer" && (viewName === "kendra" || viewName === "admin")) {
+    showToast("Kendra & Admin portals are restricted to authorized personnel. Use 'Switch Role' to login.", "🔒");
+    return;
+  }
+  if (currentUser.role === "kendra_owner" && viewName === "admin") {
+    showToast("Admin Approvals Portal requires Administrator credentials.", "🔒");
+    return;
+  }
+  if (currentUser.role === "kendra_owner" && viewName === "customer") {
+    showToast("My Orders & Alerts portal is for customer logins.", "ℹ️");
+    return;
   }
 
   activeView = viewName;
@@ -2078,4 +2110,79 @@ document.querySelectorAll(".footer__link[data-view]").forEach((link) => {
   });
 });
 
+// ---------------------------------------------------------------------
+// Background Hero Image Slider
+// ---------------------------------------------------------------------
+function initHeroBgSlider() {
+  const slides = document.querySelectorAll(".hero__slide");
+  const dots = document.querySelectorAll("#hero-slider-dots .hero__dot");
+  const prevBtn = document.getElementById("hero-arrow-prev");
+  const nextBtn = document.getElementById("hero-arrow-next");
+  const heroSection = document.getElementById("hero-section");
+
+  if (!slides.length) return;
+
+  let currentSlide = 0;
+  let sliderTimer = null;
+
+  function goToSlide(index) {
+    currentSlide = (index + slides.length) % slides.length;
+    slides.forEach((slide, i) => {
+      slide.classList.toggle("is-active", i === currentSlide);
+    });
+    dots.forEach((dot, i) => {
+      dot.classList.toggle("is-active", i === currentSlide);
+    });
+  }
+
+  function nextSlide() {
+    goToSlide(currentSlide + 1);
+  }
+
+  function prevSlide() {
+    goToSlide(currentSlide - 1);
+  }
+
+  function startAutoPlay() {
+    stopAutoPlay();
+    sliderTimer = setInterval(nextSlide, 5000);
+  }
+
+  function stopAutoPlay() {
+    if (sliderTimer) {
+      clearInterval(sliderTimer);
+      sliderTimer = null;
+    }
+  }
+
+  if (nextBtn) {
+    nextBtn.addEventListener("click", () => {
+      nextSlide();
+      startAutoPlay();
+    });
+  }
+
+  if (prevBtn) {
+    prevBtn.addEventListener("click", () => {
+      prevSlide();
+      startAutoPlay();
+    });
+  }
+
+  dots.forEach((dot, i) => {
+    dot.addEventListener("click", () => {
+      goToSlide(i);
+      startAutoPlay();
+    });
+  });
+
+  if (heroSection) {
+    heroSection.addEventListener("mouseenter", stopAutoPlay);
+    heroSection.addEventListener("mouseleave", startAutoPlay);
+  }
+
+  startAutoPlay();
+}
+
 initApp();
+initHeroBgSlider();
