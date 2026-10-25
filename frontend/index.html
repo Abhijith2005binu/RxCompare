@@ -4,11 +4,14 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>RxCompare — Multi-Role Jan Aushadhi Platform</title>
+  <title>RxCompare — Prescription-to-Generic Medicine Price Comparator &amp; Jan Aushadhi Locator</title>
+  <meta name="description" content="Prescription-to-Generic Medicine Price Comparator and Jan Aushadhi Kendra Locator under PMBJP and ABDM Network." />
+  <meta property="og:title" content="RxCompare — Prescription-to-Generic Medicine Price Comparator &amp; Jan Aushadhi Locator" />
+  <meta property="og:description" content="Prescription-to-Generic Medicine Price Comparator and Jan Aushadhi Kendra Locator under PMBJP and ABDM Network." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,500;0,600;0,700;1,500&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
     rel="stylesheet" />
 </head>
 
@@ -17,68 +20,96 @@
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Nav -->
+    <!-- Top Utility Bar (Matching reference mockup) -->
+    <div class="top-bar">
+      <div class="top-bar__inner">
+        <div class="top-bar__contact">
+          <a href="mailto:info@janaushadhi.gov.in" class="top-bar__link">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            <span>info@janaushadhi.gov.in</span>
+          </a>
+          <span class="top-bar__sep">|</span>
+          <a href="tel:18002001801" class="top-bar__link">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.127.96.36 1.903.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92Z" />
+            </svg>
+            <span>(+91) 1800 200 1801 (PMBJP Toll-Free)</span>
+          </a>
+        </div>
+        <div class="top-bar__social">
+          <a href="https://twitter.com" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Twitter">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M24 4.557c-.883.392-1.832.656-2.828.775 1.017-.609 1.798-1.574 2.165-2.724-.951.564-2.005.974-3.127 1.195-.897-.957-2.178-1.555-3.594-1.555-3.179 0-5.515 2.966-4.797 6.045-4.091-.205-7.719-2.165-10.148-5.144-1.29 2.213-.669 5.108 1.523 6.574-.806-.026-1.566-.247-2.229-.616-.054 2.281 1.581 4.415 3.949 4.89-.693.188-1.452.232-2.224.084.626 1.956 2.444 3.379 4.6 3.419-2.07 1.623-4.678 2.348-7.29 2.04 2.179 1.397 4.768 2.212 7.548 2.212 9.142 0 14.307-7.721 13.995-14.646.962-.695 1.797-1.562 2.457-2.549z"/></svg>
+          </a>
+          <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Facebook">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M9 8H6v4h3v12h5V12h3.642L18 8h-4V6.333C14 5.374 14.5 5 15.667 5H18V0h-3.808C10.595 0 9 1.582 9 4.615V8z"/></svg>
+          </a>
+          <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="Instagram">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"/></svg>
+          </a>
+          <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" class="social-icon" aria-label="YouTube">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/></svg>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Navigation Bar -->
     <header class="nav">
       <div class="nav__inner">
-        <div class="nav__left">
-          <div class="nav__brand">
-            <span class="nav__mark">
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M10.5 20.5 3.5 13.5a5 5 0 1 1 7-7l7 7a5 5 0 1 1-7 7Z" />
-                <path d="m8.5 8.5 7 7" />
+        <!-- Logo / Brand Zone -->
+        <div class="nav__brand-group">
+          <div class="nav__brand" id="brand-logo-btn" style="cursor: pointer;">
+            <span class="nav__mark-emblem">
+              <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+                <circle cx="16" cy="16" r="15" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+                <path d="M16 6v20M6 16h20" stroke="#16a34a" stroke-width="3.5" stroke-linecap="round"/>
+                <circle cx="16" cy="16" r="3" fill="#eab308"/>
               </svg>
             </span>
-            <span class="nav__word">RxCompare</span>
+            <div class="nav__brand-text">
+              <span class="nav__word">Jan Aushadhi <span class="nav__word-accent">RxCompare</span></span>
+              <span class="nav__subword">PMBJP · Govt. of India</span>
+            </div>
           </div>
-
-          <!-- Role-Specific Tabs -->
-          <nav class="nav__tabs">
-            <!-- Search (Available for Customer & Browsing) -->
-            <button type="button" class="nav__tab is-active" data-view="search" id="tab-search">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8" />
-                <path d="m21 21-4.3-4.3" />
-              </svg>
-              <span id="tab-search-text">Find Medicines</span>
-            </button>
-
-            <!-- Customer Tab -->
-            <button type="button" class="nav__tab role-tab-customer" data-view="customer" id="tab-customer">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                <path d="M3 6h18" />
-                <path d="M16 10a4 4 0 0 1-8 0" />
-              </svg>
-              My Orders &amp; Alerts
-              <span class="tab-badge" id="customer-orders-count" hidden>0</span>
-            </button>
-
-            <!-- Kendra Owner Tab -->
-            <button type="button" class="nav__tab role-tab-kendra" data-view="kendra" id="tab-kendra">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
-                <polyline points="9 22 9 12 15 12 15 22" />
-              </svg>
-              Kendra Management Portal
-              <span class="tab-badge tab-badge--amber" id="kendra-pending-badge" hidden>Pending</span>
-            </button>
-
-            <!-- Admin Tab -->
-            <button type="button" class="nav__tab role-tab-admin" data-view="admin" id="tab-admin">
-              <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              Admin Approvals Portal
-              <span class="tab-badge tab-badge--red" id="admin-pending-count" hidden>0</span>
-            </button>
-          </nav>
         </div>
 
+        <!-- Center Menu Tabs & Views -->
+        <nav class="nav__tabs">
+          <button type="button" class="nav__tab is-active" data-view="search" id="tab-search">
+            <span id="tab-search-text">Find Medicines</span>
+          </button>
+
+          <button type="button" class="nav__tab role-tab-customer" data-view="customer" id="tab-customer">
+            My Orders &amp; Alerts
+            <span class="tab-badge" id="customer-orders-count" hidden>0</span>
+          </button>
+
+          <button type="button" class="nav__tab role-tab-kendra" data-view="kendra" id="tab-kendra">
+            Kendra Management Portal
+            <span class="tab-badge tab-badge--amber" id="kendra-pending-badge" hidden>Pending</span>
+          </button>
+
+          <button type="button" class="nav__tab role-tab-admin" data-view="admin" id="tab-admin">
+            Admin Approvals Portal
+            <span class="tab-badge tab-badge--red" id="admin-pending-count" hidden>0</span>
+          </button>
+        </nav>
+
+        <!-- Right Action Controls -->
         <div class="nav__right">
+          <!-- Wishlist/Heart (Aesthetic affordance matching reference) -->
+          <button type="button" class="btn-icon-nav" id="btn-nav-wishlist" title="Saved Formulations">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+            </svg>
+          </button>
+
           <!-- Customer Cart Button -->
           <button type="button" class="btn-cart role-element-customer" id="btn-open-cart">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="9" cy="21" r="1" />
               <circle cx="20" cy="21" r="1" />
               <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" />
@@ -93,72 +124,319 @@
             <span class="user-pill__name" id="user-display-name">Ramesh Sharma</span>
             <button type="button" class="user-pill__switch-btn" id="btn-open-persona">Switch Role</button>
           </div>
+
+          <!-- Highlight CTA Button (Matching 'Appointment' cyan button in reference) -->
+          <button type="button" class="btn-appointment" id="btn-header-locate">
+            Find Kendra
+          </button>
         </div>
       </div>
     </header>
 
     <!-- VIEW 1: Customer Medicine Search & Price Comparator -->
     <section id="view-search" class="view-panel is-active">
+      <!-- HERO SECTION (Matching Sky Blue Gradient & Floating Elements in Reference) -->
       <section class="hero">
+        <div class="hero__backdrop-image" style="background-image: url('/assets/images/hero_banner.jpg');"></div>
         <div class="hero__inner">
-          <p class="hero__eyebrow">Pradhan Mantri Bhartiya Janaushadhi Pariyojana · ABDM Network</p>
-          <h1 class="hero__title">The same medicine, <em>a fraction</em> of the price.</h1>
-          <p class="hero__subtitle">
-            Enter any branded medicine from your prescription. Compare verified PMBJP generic rates,
-            discover live stock at certified Jan Aushadhi Kendras, <strong>add to cart</strong>, and <strong>order with
-              instant payment</strong>.
-          </p>
+          <h1 class="hero__title">Affordable Quality<br />Generic Medicines</h1>
 
+          <!-- Central Search Bar Container (with Category dropdown matching reference) -->
           <form id="search-form" class="search-bar">
-            <svg class="search-bar__icon" viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor"
-              stroke-width="2">
-              <circle cx="11" cy="11" r="8" />
-              <path d="m21 21-4.3-4.3" />
-            </svg>
-            <input id="search-input" type="text"
-              placeholder="Search brand or generic: “Dolo 650”, “Crocin”, “Storvas”, “Glycomet”, “Pan 40”…"
-              autocomplete="off" class="search-bar__input" />
-            <button type="submit" id="search-button" class="search-bar__button">Compare &amp; Find Kendra</button>
+            <div class="search-bar__category">
+              <select id="search-category-select" class="search-bar__category-select">
+                <option value="">All category</option>
+                <option value="Analgesic">Analgesic / Antipyretic</option>
+                <option value="Antibiotic">Antibiotic</option>
+                <option value="Antidiabetic">Antidiabetic</option>
+                <option value="Cardiovascular">Cardiovascular</option>
+                <option value="Antacid">Antacid / PPI</option>
+                <option value="Antihistamine">Antihistamine / Allergy</option>
+                <option value="Vitamins">Vitamins &amp; Supplements</option>
+                <option value="Antifungal">Antifungal</option>
+              </select>
+              <svg class="search-bar__chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 12 15 18 9" />
+              </svg>
+            </div>
+            
+            <div class="search-bar__divider"></div>
+
+            <div class="search-bar__input-wrap">
+              <input id="search-input" type="text"
+                placeholder="Search for something... “Dolo 650”, “Crocin”, “Storvas”, “Glycomet”"
+                autocomplete="off" class="search-bar__input" />
+              <button type="submit" id="search-button" class="search-bar__submit-btn" aria-label="Compare &amp; Find Kendra">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <circle cx="11" cy="11" r="8" />
+                  <path d="m21 21-4.3-4.3" />
+                </svg>
+                <span class="search-btn-text">Compare &amp; Find Kendra</span>
+              </button>
+            </div>
           </form>
 
+          <!-- Action Button underneath search bar -->
+          <div class="hero__actions">
+            <button type="button" class="btn-hero-dark" id="btn-hero-compare">Check More</button>
+          </div>
+
+          <!-- Carousel Dots (3 dots matching reference) -->
+          <div class="hero__dots">
+            <span class="hero__dot is-active"></span>
+            <span class="hero__dot"></span>
+            <span class="hero__dot"></span>
+          </div>
+
+          <!-- Quick Search Tags -->
           <div class="quick-tags">
-            <span class="quick-tags__label">Popular:</span>
+            <span class="quick-tags__label">Popular Searches:</span>
             <button type="button" class="quick-tag" data-term="Dolo 650">Dolo 650</button>
             <button type="button" class="quick-tag" data-term="Storvas 10">Storvas 10</button>
             <button type="button" class="quick-tag" data-term="Glycomet 500">Glycomet 500</button>
             <button type="button" class="quick-tag" data-term="Pan 40">Pan 40</button>
             <button type="button" class="quick-tag" data-term="Augmentin 625">Augmentin 625</button>
             <button type="button" class="quick-tag" data-term="Montair-LC">Montair-LC</button>
+            <button type="button" class="quick-tag" data-term="Amoxil">Amoxil</button>
           </div>
 
+          <!-- Live Network Stats Bar -->
           <dl id="hero-stats" class="hero__stats" hidden>
             <div class="hero__stat">
               <dt>Medicines indexed</dt>
               <dd id="stat-medicine-count">—</dd>
             </div>
             <div class="hero__stat">
-              <dt>Average savings</dt>
+              <dt>Average citizen savings</dt>
               <dd id="stat-avg-savings">—</dd>
             </div>
             <div class="hero__stat">
-              <dt>Active Kendras</dt>
+              <dt>Active PMBJP Kendras</dt>
               <dd id="stat-store-count">—</dd>
             </div>
           </dl>
         </div>
       </section>
 
-      <!-- Results Grid -->
-      <main class="app__main">
+      <!-- 4 SERVICE FEATURE BLOCKS (Matching reference mockup below hero) -->
+      <section class="features-bar">
+        <div class="features-bar__inner">
+          <div class="feature-card">
+            <div class="feature-card__icon feature-card__icon--orange">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            </div>
+            <div class="feature-card__content">
+              <h4 class="feature-card__title">Medicine</h4>
+              <p class="feature-card__text">WHO-GMP certified quality generic formulations with up to 90% savings.</p>
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-card__icon feature-card__icon--green">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+            </div>
+            <div class="feature-card__content">
+              <h4 class="feature-card__title">Wellness</h4>
+              <p class="feature-card__text">Nutritional care, vitamins, minerals, and preventative daily supplements.</p>
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-card__icon feature-card__icon--blue">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="12 2 2 7 12 12 22 7 12 2" />
+                <polyline points="2 17 12 22 22 17" />
+                <polyline points="2 12 12 17 22 12" />
+              </svg>
+            </div>
+            <div class="feature-card__content">
+              <h4 class="feature-card__title">Diagnostic</h4>
+              <p class="feature-card__text">Verified local PMBJP Kendras with live stock status and instant directions.</p>
+            </div>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-card__icon feature-card__icon--yellow">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10" />
+                <path d="m4.93 4.93 4.24 4.24" />
+                <path d="m14.83 9.17 4.24-4.24" />
+                <path d="m14.83 14.83 4.24 4.24" />
+                <path d="m9.17 14.83-4.24 4.24" />
+              </svg>
+            </div>
+            <div class="feature-card__content">
+              <h4 class="feature-card__title">Health Corner</h4>
+              <p class="feature-card__text">Prescription comparison, digital cart ordering &amp; out-of-stock alert notifications.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 4 PROMOTIONAL PASTEL BANNERS (Matching reference mockup) -->
+      <section class="promo-grid-section">
+        <div class="promo-grid">
+          <!-- Promo 1: Blue -->
+          <div class="promo-card promo-card--blue">
+            <div class="promo-card__body">
+              <span class="promo-card__eyebrow">GET AT YOUR KENDRA</span>
+              <h3 class="promo-card__heading">Medication at<br />One Place</h3>
+              <button type="button" class="promo-card__btn" data-category="All">
+                <span>Shop Now</span>
+                <span class="promo-card__arrow">›</span>
+              </button>
+            </div>
+            <div class="promo-card__img-wrap">
+              <img src="/assets/images/promo_medication.jpg" alt="Medication Packages" class="promo-card__img" />
+            </div>
+          </div>
+
+          <!-- Promo 2: Pink -->
+          <div class="promo-card promo-card--pink">
+            <div class="promo-card__body">
+              <span class="promo-card__eyebrow">UP TO 90% OFF</span>
+              <h3 class="promo-card__heading">Naturally<br />Good</h3>
+              <button type="button" class="promo-card__btn" data-category="Vitamins">
+                <span>Compare Now</span>
+                <span class="promo-card__arrow">›</span>
+              </button>
+            </div>
+            <div class="promo-card__img-wrap">
+              <img src="/assets/images/promo_supplements.jpg" alt="Natural Supplements" class="promo-card__img" />
+            </div>
+          </div>
+
+          <!-- Promo 3: Green -->
+          <div class="promo-card promo-card--green">
+            <div class="promo-card__body">
+              <span class="promo-card__eyebrow">WHO-GMP CERTIFIED</span>
+              <h3 class="promo-card__heading">Quality Assured<br />Products</h3>
+              <button type="button" class="promo-card__btn" data-category="Antibiotic">
+                <span>Shop Now</span>
+                <span class="promo-card__arrow">›</span>
+              </button>
+            </div>
+            <div class="promo-card__img-wrap">
+              <img src="/assets/images/promo_wellness.jpg" alt="Certified Care Products" class="promo-card__img" />
+            </div>
+          </div>
+
+          <!-- Promo 4: Yellow -->
+          <div class="promo-card promo-card--yellow">
+            <div class="promo-card__body">
+              <span class="promo-card__eyebrow">UP TO 85% OFF</span>
+              <h3 class="promo-card__heading">Medicines<br />Popularly</h3>
+              <button type="button" class="promo-card__btn" data-category="Analgesic">
+                <span>Shop Now</span>
+                <span class="promo-card__arrow">›</span>
+              </button>
+            </div>
+            <div class="promo-card__img-wrap">
+              <img src="/assets/images/promo_supplements.jpg" alt="Popular Medicines" class="promo-card__img" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- POPULAR CATEGORIES CIRCLE CAROUSEL (Matching reference mockup) -->
+      <section class="categories-section">
+        <div class="categories-header">
+          <p class="categories-eyebrow">Our Categories</p>
+          <h2 class="categories-title">Popular Categories</h2>
+        </div>
+
+        <div class="categories-carousel-wrap">
+          <button type="button" class="carousel-nav-btn carousel-nav-btn--prev" id="cat-prev-btn" aria-label="Previous categories">‹</button>
+          
+          <div class="categories-row" id="categories-row">
+            <button type="button" class="cat-item is-active" data-cat="">
+              <div class="cat-item__circle cat-item__circle--otc">
+                <span>💊</span>
+              </div>
+              <span class="cat-item__name">All Drugs</span>
+            </button>
+
+            <button type="button" class="cat-item" data-cat="Analgesic">
+              <div class="cat-item__circle cat-item__circle--analgesic">
+                <span>🩹</span>
+              </div>
+              <span class="cat-item__name">Otc Deals</span>
+            </button>
+
+            <button type="button" class="cat-item" data-cat="Ayush">
+              <div class="cat-item__circle cat-item__circle--ayush">
+                <span>🌿</span>
+              </div>
+              <span class="cat-item__name">Ayush</span>
+            </button>
+
+            <button type="button" class="cat-item" data-cat="Antibiotic">
+              <div class="cat-item__circle cat-item__circle--covid">
+                <span>🛡️</span>
+              </div>
+              <span class="cat-item__name">Antibiotics</span>
+            </button>
+
+            <button type="button" class="cat-item" data-cat="Cardiovascular">
+              <div class="cat-item__circle cat-item__circle--devices">
+                <span>❤️</span>
+              </div>
+              <span class="cat-item__name">Cardiovascular</span>
+            </button>
+
+            <button type="button" class="cat-item" data-cat="Antidiabetic">
+              <div class="cat-item__circle cat-item__circle--diabetes">
+                <span>🩸</span>
+              </div>
+              <span class="cat-item__name">Diabetes</span>
+            </button>
+
+            <button type="button" class="cat-item" data-cat="Antacid">
+              <div class="cat-item__circle cat-item__circle--eyewear">
+                <span>🧪</span>
+              </div>
+              <span class="cat-item__name">Antacid / PPI</span>
+            </button>
+
+            <button type="button" class="cat-item" data-cat="Vitamins">
+              <div class="cat-item__circle cat-item__circle--fitness">
+                <span>🏃</span>
+              </div>
+              <span class="cat-item__name">Vitamins</span>
+            </button>
+          </div>
+
+          <button type="button" class="carousel-nav-btn carousel-nav-btn--next" id="cat-next-btn" aria-label="Next categories">›</button>
+        </div>
+      </section>
+
+      <!-- RESULTS SECTION: PMBJP Generic Formulations Grid -->
+      <main class="app__main" id="search-results-section">
         <p id="results-error" class="app__error" hidden></p>
         <p id="results-empty" class="app__empty" hidden>
-          No medicine found matching that name. Try searching by generic molecule (e.g. “Paracetamol”, “Atorvastatin”)
-          or common brands (“Crocin”, “Storvas”, “Glycomet”, “Azithral”, “Pan 40”).
+          No medicine found matching that query. Try searching by generic molecule (e.g. “Paracetamol”, “Atorvastatin”)
+          or common brands (“Crocin”, “Storvas”, “Glycomet”, “Amoxil”, “Pan 40”).
         </p>
-        <div class="results-header" id="results-header" hidden>
-          <p id="results-label" class="app__results-label"></p>
+
+        <!-- Results Header matching the green tag in reference -->
+        <div class="results-header" id="results-header">
+          <h3 id="results-label" class="app__results-label">FEATURED PMBJP GENERIC FORMULATIONS (9)</h3>
           <span class="results-badge">Live Stock Discovery &amp; Cart Ordering</span>
         </div>
+
+        <!-- 3-Column Medicine Cards Grid matching reference cards -->
         <div id="results-grid" class="app__results"></div>
       </main>
     </section>
@@ -201,9 +479,9 @@
           <div class="info-callout">
             <span class="info-callout__icon">🔔</span>
             <div>
-              <strong>How Out-of-Stock Alerts work:</strong> When a medicine is unavailable at a Kendra, your alert is
-              registered in our network. As soon as the Kendra Owner restocks the batch, you get an instant restock
-              notification and direct order link!
+              <strong>How Out-of-Stock Alerts work:</strong> When a medicine is currently low or unavailable at a Kendra, your alert is
+              logged in the PMBJP network. As soon as the Kendra restocks the batch, you receive an automated restock
+              notification and direct priority ordering link!
             </div>
           </div>
           <div id="customer-alerts-list" class="alerts-list"></div>
@@ -226,26 +504,23 @@
           </div>
         </div>
 
-        <!-- Unapproved/Pending Notice (shown if user's Kendra application is pending) -->
+        <!-- Pending Approval Banner -->
         <div id="kendra-pending-banner" class="alert-banner alert-banner--warning" hidden>
           <div class="alert-banner__content">
             <strong>Kendra Registration Application Pending Approval</strong>
-            <p>Your registration for <strong id="pending-kendra-name">—</strong> has been submitted and is currently in
-              the verification queue. Admin will review drug license details and activate your store.</p>
+            <p>Your registration for <strong id="pending-kendra-name">—</strong> has been submitted and is in the verification queue. Admin will verify drug license details and activate your digital store.</p>
           </div>
         </div>
 
         <!-- Registration Form for New Kendra Owners -->
         <div id="kendra-register-section" class="card card--padded" hidden>
           <h3 class="card-title">Register Your Jan Aushadhi Kendra</h3>
-          <p class="card-subtitle">Join the nationwide PMBJP digital health network to list your stock, accept online
-            orders, and fulfill local prescriptions.</p>
+          <p class="card-subtitle">Join the nationwide PMBJP digital network to list live inventory, accept online prescriptions, and fulfill customer orders.</p>
 
           <form id="kendra-register-form" class="grid-form">
             <div class="form-group">
               <label>Kendra Store Name *</label>
-              <input type="text" name="kendraName" required placeholder="e.g. Jan Aushadhi Kendra - Sector 14"
-                class="form-input" />
+              <input type="text" name="kendraName" required placeholder="e.g. Jan Aushadhi Kendra - Sector 14" class="form-input" />
             </div>
             <div class="form-group">
               <label>Owner / Pharmacist Name *</label>
@@ -261,8 +536,7 @@
             </div>
             <div class="form-group full-width">
               <label>Complete Street Address *</label>
-              <input type="text" name="address" required placeholder="Shop number, building, hospital campus, landmark"
-                class="form-input" />
+              <input type="text" name="address" required placeholder="Shop number, building, hospital campus, landmark" class="form-input" />
             </div>
             <div class="form-group">
               <label>City *</label>
@@ -278,13 +552,11 @@
             </div>
             <div class="form-group">
               <label>Drug License Number *</label>
-              <input type="text" name="licenseNumber" required placeholder="e.g. DL-PMBJP-2026-XXXXX"
-                class="form-input" />
+              <input type="text" name="licenseNumber" required placeholder="e.g. DL-PMBJP-2026-XXXXX" class="form-input" />
             </div>
             <div class="form-group full-width">
               <label>Operating Hours</label>
-              <input type="text" name="operatingHours" placeholder="e.g. 08:30 AM - 09:30 PM (All 7 Days)"
-                class="form-input" />
+              <input type="text" name="operatingHours" placeholder="e.g. 08:30 AM - 09:30 PM (All 7 Days)" class="form-input" />
             </div>
             <div class="form-group full-width">
               <button type="submit" class="btn btn--primary btn--large">Submit Kendra Application to Admin</button>
@@ -323,11 +595,10 @@
             </button>
           </div>
 
-          <!-- Tab 1: Inventory Table with inline stock editor -->
+          <!-- Tab 1: Inventory Table -->
           <div id="subtab-kendra-inventory" class="subtab-panel is-active">
             <div class="inventory-bar">
-              <input type="text" id="kendra-inventory-search"
-                placeholder="Filter inventory by name, composition, drug code…" class="form-input" />
+              <input type="text" id="kendra-inventory-search" placeholder="Filter inventory by name, composition, drug code…" class="form-input" />
             </div>
             <div class="table-wrap">
               <table class="data-table">
@@ -446,19 +717,48 @@
       </div>
     </section>
 
-    <!-- Footer -->
+    <!-- Footer matching reference -->
     <footer class="footer">
       <div class="footer__inner">
-        <p class="footer__disclaimer">
-          RxCompare Multi-Role Jan Aushadhi Ecosystem. Aligned with ABDM / UHI v2.0.2 Gateway Protocol and Department of
-          Pharmaceuticals, Ministry of Chemicals &amp; Fertilizers, Govt. of India.
-        </p>
-        <p class="footer__meta">RxCompare · UN SDG 3 (Good Health &amp; Well-Being)</p>
+        <div class="footer__top">
+          <div class="footer__col">
+            <div class="footer__brand">
+              <svg viewBox="0 0 32 32" width="24" height="24" fill="none">
+                <circle cx="16" cy="16" r="15" fill="#f0fdf4" stroke="#22c55e" stroke-width="1.5"/>
+                <path d="M16 6v20M6 16h20" stroke="#16a34a" stroke-width="3.5" stroke-linecap="round"/>
+              </svg>
+              <span class="footer__brand-text">Jan Aushadhi</span>
+            </div>
+            <p class="footer__desc">
+              Pradhan Mantri Bhartiya Janaushadhi Pariyojana (PMBJP). Providing quality medicines at affordable prices for everyone.
+            </p>
+          </div>
+          <div class="footer__col">
+            <h5 class="footer__col-title">Portal Links</h5>
+            <ul class="footer__links">
+              <li><a href="#view-search" class="footer__link" data-view="search">Find Medicines</a></li>
+              <li><a href="#view-customer" class="footer__link" data-view="customer">My Account &amp; Orders</a></li>
+              <li><a href="#view-kendra" class="footer__link" data-view="kendra">Kendra Portal</a></li>
+              <li><a href="#view-admin" class="footer__link" data-view="admin">PMBJP Admin Oversight</a></li>
+            </ul>
+          </div>
+          <div class="footer__col">
+            <h5 class="footer__col-title">Helpline &amp; Support</h5>
+            <p class="footer__text">Toll Free: 1800 200 1801<br />Helpline: (+91) 11 2338 5642<br />Email: info@janaushadhi.gov.in</p>
+          </div>
+        </div>
+
+        <div class="footer__bottom">
+          <p class="footer__disclaimer">
+            Jan Aushadhi RxCompare Platform · ABDM Network Protocol v2.0.2 · Department of Pharmaceuticals, Ministry of Chemicals &amp; Fertilizers, Govt. of India.
+          </p>
+          <p class="footer__meta">RxCompare · UN SDG 3 (Good Health &amp; Well-Being)</p>
+        </div>
       </div>
     </footer>
   </div>
 
-  <!-- Store drawer (Nearby Kendras for Medicine) -->
+  <!-- Store Drawer (Nearby Kendras for Medicine) -->
   <div id="drawer-backdrop" class="drawer-backdrop"></div>
   <aside id="drawer" class="drawer" aria-hidden="true">
     <div class="drawer__header">
@@ -481,7 +781,7 @@
           <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
             <polygon points="3 11 22 2 13 21 11 13 3 11" />
           </svg>
-          My Location
+          <span>My Location</span>
         </button>
       </div>
       <div class="drawer__city-select-wrap">
@@ -503,307 +803,250 @@
     <div id="drawer-body" class="drawer__body"></div>
   </aside>
 
-  <!-- CUSTOMER CART DRAWER -->
+  <!-- Cart Drawer -->
   <div id="cart-drawer-backdrop" class="drawer-backdrop"></div>
-  <aside id="cart-drawer" class="drawer" aria-hidden="true">
+  <aside id="cart-drawer" class="drawer drawer--cart" aria-hidden="true">
     <div class="drawer__header">
       <div>
-        <p class="drawer__eyebrow">Your Medicine Cart</p>
-        <h4 class="drawer__title">Subsidized Generic Prescriptions</h4>
+        <p class="drawer__eyebrow">PMBJP Subsidized Order</p>
+        <h4 class="drawer__title">Your Medicine Cart</h4>
       </div>
       <button id="cart-drawer-close" class="drawer__close" aria-label="Close">&times;</button>
     </div>
 
-    <div id="cart-savings-banner" class="cart-savings-banner">
-      <span class="cart-savings-badge">Government Subsidy Applied</span>
-      <p class="cart-savings-text" id="cart-savings-text">Estimated savings vs branded: ₹0.00</p>
-    </div>
+    <div id="cart-items-body" class="cart-drawer__body"></div>
 
-    <div id="cart-items-body" class="cart-items-body"></div>
-
-    <div class="cart-footer" id="cart-footer" hidden>
-      <div class="cart-fulfillment-row">
-        <label for="cart-kendra-select"
-          style="font-size: 0.78rem; font-weight: 600; text-transform: uppercase;">Fulfilling Jan Aushadhi
-          Kendra:</label>
-        <select id="cart-kendra-select" class="form-input"></select>
+    <div class="cart-drawer__footer" id="cart-footer">
+      <div class="cart-kendra-group">
+        <label for="cart-kendra-select" class="cart-kendra-label">Fulfilling Jan Aushadhi Kendra:</label>
+        <select id="cart-kendra-select" class="cart-kendra-select">
+          <option value="PMBJK02001">Jan Aushadhi Kendra - KEM Hospital Parel (Mumbai)</option>
+          <option value="PMBJK01001">Jan Aushadhi Kendra - AIIMS Ansari Nagar (New Delhi)</option>
+          <option value="PMBJK03001">Jan Aushadhi Kendra - Victoria Hospital (Bengaluru)</option>
+          <option value="PMBJK04001">Jan Aushadhi Kendra - NIMS Punjagutta (Hyderabad)</option>
+          <option value="PMBJK05001">Jan Aushadhi Kendra - Rasta Peth (Pune)</option>
+        </select>
       </div>
+
       <div class="cart-total-row">
-        <span>Total Payable:</span>
-        <strong id="cart-total-price" class="cart-total-amount">₹0.00</strong>
+        <span class="cart-total-label">Total Generic MRP:</span>
+        <strong id="cart-total-price" class="cart-total-price">₹0.00</strong>
+      </div>
+      <div class="cart-savings-banner" id="cart-savings-text">
+        Estimated savings vs branded: ₹0.00
       </div>
       <button type="button" class="btn btn--primary btn--large full-width" id="btn-proceed-payment">
-        Proceed to Payment &rarr;
+        Proceed to Instant Checkout &amp; Pay
       </button>
     </div>
   </aside>
 
-  <!-- INTERACTIVE PAYMENT SIMULATION MODAL -->
-  <div id="payment-modal-backdrop" class="modal-backdrop" hidden>
-    <div class="modal modal--payment" role="dialog" aria-modal="true">
-      <div class="modal__header">
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="pay-lock-icon">🔒</span>
-          <h3 class="modal__title">Payment Gateway</h3>
+  <!-- Instant Order & Payment Simulator Modal -->
+  <div id="payment-modal-backdrop" class="modal-backdrop" hidden></div>
+  <div id="payment-modal" class="modal" hidden>
+    <div class="modal__header">
+      <div>
+        <span class="badge badge--otc">ABDM Jan Aushadhi Payment Gateway</span>
+        <h3 class="modal__title">Simulated Prescription Order</h3>
+      </div>
+      <button type="button" id="btn-close-payment-modal" class="modal__close" aria-label="Close">&times;</button>
+    </div>
+
+    <div class="modal__body">
+      <!-- Order Quick Summary -->
+      <div class="order-summary-box">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <div>
+            <h4 id="pos-customer-name" class="order-summary-title">Ramesh Sharma</h4>
+            <p id="pos-kendra-name" class="order-summary-sub">Jan Aushadhi Kendra - KEM Hospital Parel</p>
+          </div>
+          <span class="badge badge--otc">Subsidized MRP</span>
         </div>
-        <button type="button" class="modal__close" id="btn-close-payment-modal">&times;</button>
+        <div class="order-amount-tag">
+          <span>Total Payable Amount (INR):</span>
+          <strong id="pos-total-amount">₹0.00</strong>
+        </div>
       </div>
 
-      <div class="modal__body" id="payment-modal-content">
-        <!-- Step 1: Payment Method Selection -->
-        <div id="payment-selection-step">
-          <div class="payment-order-summary">
-            <div class="pos-row">
-              <span class="pos-label">Recipient:</span>
-              <strong id="pos-customer-name">—</strong>
-            </div>
-            <div class="pos-row">
-              <span class="pos-label">Fulfilling Kendra:</span>
-              <strong id="pos-kendra-name">—</strong>
-            </div>
-            <div class="pos-row">
-              <span class="pos-label">Total Subsidized Amount:</span>
-              <strong id="pos-total-amount" class="text-emerald" style="font-size: 1.25rem;">₹0.00</strong>
-            </div>
+      <!-- Step 1: Method & Address Selection -->
+      <div id="payment-selection-step">
+        <div class="form-group">
+          <label>Delivery / Dispensing Address *</label>
+          <input type="text" id="pay-delivery-address" class="form-input" placeholder="Enter delivery address or 'Kendra Counter Pickup'" value="B-402, Green Glen Residences, Bellandur, Bengaluru - 560103" />
+        </div>
+
+        <label class="payment-method-label">Select Simulation Payment Channel:</label>
+        <div class="payment-methods-grid">
+          <label class="pay-radio pay-method-card is-selected">
+            <input type="radio" name="paymentSimulationOption" value="UPI" checked />
+            <span class="pay-radio__card">
+              <strong>UPI Sandbox (NPCI / BHIM / GPay / PhonePe)</strong>
+              <small>Simulates instant zero-surcharge ABDM digital payment</small>
+            </span>
+          </label>
+          <label class="pay-radio pay-method-card">
+            <input type="radio" name="paymentSimulationOption" value="Card" />
+            <span class="pay-radio__card">
+              <strong>RuPay / Debit Card Counter Gateway</strong>
+              <small>Subsidized merchant discount rate (MDR zero)</small>
+            </span>
+          </label>
+          <label class="pay-radio pay-method-card">
+            <input type="radio" name="paymentSimulationOption" value="Cash" />
+            <span class="pay-radio__card">
+              <strong>Pay at Jan Aushadhi Kendra Counter</strong>
+              <small>Hold inventory stock &amp; pay in cash on collection</small>
+            </span>
+          </label>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-top: 18px;">
+          <button type="button" id="btn-cancel-payment" class="btn btn--outline" style="flex: 1;">Cancel</button>
+          <button type="button" id="btn-run-payment-sim" class="btn btn--primary" style="flex: 2;">Authorize &amp; Simulate Instant Payment</button>
+        </div>
+      </div>
+
+      <!-- Step 2: Animated Simulation Progress -->
+      <div id="payment-progress-step" style="display: none; padding: 24px 8px; text-align: center;">
+        <div class="spinner" style="margin: 0 auto 16px; width: 36px; height: 36px;"></div>
+        <h4 id="pay-progress-status" style="margin: 0 0 6px; color: var(--navy-deep); font-size: 1.05rem;">Connecting to ABDM / NPCI Sandbox…</h4>
+        <p id="pay-progress-sub" class="text-subtle" style="margin: 0 0 20px; font-size: 0.85rem;">Initiating secure encrypted handshake…</p>
+
+        <div class="sim-steps" style="display: flex; justify-content: center; gap: 12px; margin-top: 14px;">
+          <div id="pstep-1" class="sim-step-badge is-active" style="padding: 4px 10px; font-size: 0.78rem; border-radius: 4px; background: #e0f2fe; color: #0284c7; font-weight: 700;">1. Gateway Link</div>
+          <div id="pstep-2" class="sim-step-badge" style="padding: 4px 10px; font-size: 0.78rem; border-radius: 4px; background: #f1f5f9; color: #64748b; font-weight: 700;">2. Subsidy Audit</div>
+          <div id="pstep-3" class="sim-step-badge" style="padding: 4px 10px; font-size: 0.78rem; border-radius: 4px; background: #f1f5f9; color: #64748b; font-weight: 700;">3. Stock Dispatch</div>
+        </div>
+      </div>
+
+      <!-- Step 3: Success Receipt -->
+      <div id="payment-success-step" style="display: none;">
+        <div style="text-align: center; padding: 12px 0 20px;">
+          <div style="width: 52px; height: 52px; background: #dcfce7; color: #16a34a; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 26px; margin: 0 auto 10px;">✓</div>
+          <h3 style="margin: 0 0 4px; color: #15803d; font-size: 1.25rem;">Payment Confirmed!</h3>
+          <p class="text-subtle" style="margin: 0;">Prescription order successfully registered on ABDM / PMBJP Network</p>
+        </div>
+
+        <div class="card card--padded" style="background: #f8fafc; border: 1px solid #e2e8f0; margin-bottom: 18px;">
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.86rem;">
+            <span class="text-subtle">Digital Order ID:</span>
+            <strong id="receipt-order-id" class="mono text-navy">—</strong>
           </div>
-
-          <p class="modal-desc" style="margin-top: 10px;">Select a simulated payment method to complete your generic
-            medicine order:</p>
-
-          <div class="payment-methods-grid">
-            <!-- Method 1: UPI -->
-            <label class="pay-method-card is-selected">
-              <input type="radio" name="paymentSimulationOption" value="UPI" checked />
-              <div class="pay-method-content">
-                <div class="pay-method-title">
-                  <span>⚡ UPI Instant Pay (Google Pay / PhonePe / Paytm / BHIM)</span>
-                </div>
-                <p class="pay-method-sub">Instant zero-fee generic medicine subsidy clearance</p>
-
-                <div class="upi-sim-qr-box">
-                  <div class="upi-qr-graphic">
-                    <div class="qr-pattern"></div>
-                  </div>
-                  <div class="upi-qr-details">
-                    <span class="upi-vpa">VPA: <strong>pmbjp.janaushadhi@sbi</strong></span>
-                    <span class="upi-tag">PMBJP Certified Merchant</span>
-                  </div>
-                </div>
-              </div>
-            </label>
-
-            <!-- Method 2: Card / Net Banking -->
-            <label class="pay-method-card">
-              <input type="radio" name="paymentSimulationOption" value="Card" />
-              <div class="pay-method-content">
-                <div class="pay-method-title">
-                  <span>💳 RuPay / Debit Card / Net Banking</span>
-                </div>
-                <p class="pay-method-sub">Simulate RBI OTP verification with mock RuPay card</p>
-                <div class="mock-card-preview">
-                  <span>RuPay Card •••• 4022</span>
-                  <span class="text-emerald">Validated</span>
-                </div>
-              </div>
-            </label>
-
-            <!-- Method 3: COD -->
-            <label class="pay-method-card">
-              <input type="radio" name="paymentSimulationOption" value="Cash" />
-              <div class="pay-method-content">
-                <div class="pay-method-title">
-                  <span>💵 Pay on Delivery / Counter Pickup</span>
-                </div>
-                <p class="pay-method-sub">Pay directly with cash or UPI at delivery doorstep or Kendra counter</p>
-              </div>
-            </label>
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.86rem;">
+            <span class="text-subtle">NPCI Transaction Ref:</span>
+            <span id="receipt-txn-id" class="mono text-navy font-bold">—</span>
           </div>
-
-          <!-- Customer Details Form Fields (if not already filled) -->
-          <div class="form-group" style="margin-top: 12px;">
-            <label>Delivery Address</label>
-            <input type="text" id="pay-delivery-address" class="form-input"
-              placeholder="House/Flat No, Landmark, City, Pincode" />
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 0.86rem;">
+            <span class="text-subtle">Fulfilling Kendra:</span>
+            <span id="receipt-kendra" class="font-bold">—</span>
           </div>
-
-          <div class="modal__actions" style="margin-top: 16px;">
-            <button type="button" class="btn btn--outline" id="btn-cancel-payment">Cancel</button>
-            <button type="button" class="btn btn--primary btn--large" id="btn-run-payment-sim">
-              Pay Now &rarr;
-            </button>
+          <div style="display: flex; justify-content: space-between; padding: 6px 0; font-size: 0.95rem; font-weight: 700; color: #16a34a;">
+            <span>Subsidized Amount Paid:</span>
+            <span id="receipt-amount">₹0.00</span>
           </div>
         </div>
 
-        <!-- Step 2: Live Payment Simulation Progress (Animated State) -->
-        <div id="payment-progress-step" style="display: none; text-align: center; padding: 24px 0;">
-          <div class="pay-progress-spinner"></div>
-          <h4 class="pay-progress-title" id="pay-progress-status">Initiating payment handshake with UPI Gateway…</h4>
-          <p class="pay-progress-sub" id="pay-progress-sub">Connecting to National Payments Corporation of India (NPCI)…
-          </p>
-          <div class="pay-progress-steps">
-            <span class="pay-step is-active" id="pstep-1">1. Bank Connect</span>
-            <span class="pay-step" id="pstep-2">2. Generic Subsidy Authorization</span>
-            <span class="pay-step" id="pstep-3">3. Payment Capture</span>
-          </div>
-        </div>
-
-        <!-- Step 3: Payment Success Receipt -->
-        <div id="payment-success-step" style="display: none; text-align: center; padding: 16px 0;">
-          <div class="pay-success-icon">✓</div>
-          <h3 style="color: var(--emerald); margin: 8px 0 4px;">Payment Successfully Captured!</h3>
-          <p class="text-subtle" style="margin-bottom: 16px;">Your generic prescription order has been confirmed with
-            the Jan Aushadhi Kendra.</p>
-
-          <div class="pay-receipt-box">
-            <div class="receipt-row">
-              <span>Transaction Ref:</span>
-              <strong id="receipt-txn-id" class="mono">TXN-PMBJP-2026-XXXX</strong>
-            </div>
-            <div class="receipt-row">
-              <span>Order Number:</span>
-              <strong id="receipt-order-id" class="mono">—</strong>
-            </div>
-            <div class="receipt-row">
-              <span>Amount Paid:</span>
-              <strong id="receipt-amount" class="text-emerald font-bold">—</strong>
-            </div>
-            <div class="receipt-row">
-              <span>Fulfilling Kendra:</span>
-              <strong id="receipt-kendra">—</strong>
-            </div>
-          </div>
-
-          <button type="button" class="btn btn--primary btn--large full-width" id="btn-view-order-status"
-            style="margin-top: 16px;">
-            Track Order in "My Orders" &rarr;
-          </button>
-        </div>
+        <button type="button" class="btn btn--primary full-width" id="btn-view-order-status">
+          View Order in My Account &amp; Track Status
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- MODAL: Out of Stock Alert ("Notify Me") -->
-  <div id="alert-modal-backdrop" class="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal__header">
-        <h3 class="modal__title">Get Out-of-Stock Alert</h3>
-        <button type="button" class="modal__close" id="btn-close-alert-modal">&times;</button>
+  <!-- Persona Switcher Modal -->
+  <div id="persona-modal-backdrop" class="modal-backdrop" hidden></div>
+  <div id="persona-modal" class="modal modal--persona" hidden>
+    <div class="modal__header">
+      <div>
+        <p class="modal__eyebrow">Multi-Role Testing Hub</p>
+        <h3 class="modal__title">Switch Active User Persona</h3>
       </div>
-      <form id="stock-alert-form" class="modal__body">
-        <input type="hidden" name="medicineId" id="alert-medicine-id" />
-        <input type="hidden" name="kendraId" id="alert-kendra-id" />
-
-        <p class="modal-desc">
-          We will alert you via email/SMS immediately when <strong id="alert-med-name">—</strong> is restocked at <span
-            id="alert-kendra-name">your local Kendra</span>.
-        </p>
-
-        <div class="form-group">
-          <label>Your Name</label>
-          <input type="text" name="customerName" id="alert-customer-name" class="form-input" />
-        </div>
-
-        <div class="form-group">
-          <label>Notification Email *</label>
-          <input type="email" name="customerEmail" id="alert-customer-email" required class="form-input" />
-        </div>
-
-        <div class="form-group">
-          <label>Mobile Number (For SMS Alert)</label>
-          <input type="tel" name="customerPhone" id="alert-customer-phone" class="form-input" />
-        </div>
-
-        <div class="modal__actions">
-          <button type="button" class="btn btn--outline" id="btn-cancel-alert">Cancel</button>
-          <button type="submit" class="btn btn--primary">Subscribe to Restock Alert</button>
-        </div>
-      </form>
+      <button type="button" id="btn-close-persona-modal" class="modal__close" aria-label="Close">&times;</button>
+    </div>
+    <div class="modal__body">
+      <p class="modal__intro">
+        RxCompare provides tailored workflows for three primary stakeholders. Select an active persona to experience their authorized interface:
+      </p>
+      <div id="persona-cards-container" class="persona-cards-container"></div>
     </div>
   </div>
 
-  <!-- MODAL: Kendra Owner Add Product -->
-  <div id="add-product-modal-backdrop" class="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal__header">
-        <h3 class="modal__title">Add New Generic Medicine Formulation</h3>
-        <button type="button" class="modal__close" id="btn-close-product-modal">&times;</button>
+  <!-- Add Medicine Modal (Kendra Owner) -->
+  <div id="add-product-modal-backdrop" class="modal-backdrop" hidden></div>
+  <div id="add-product-modal" class="modal" hidden>
+    <div class="modal__header">
+      <div>
+        <p class="modal__eyebrow">Inventory Intake</p>
+        <h3 class="modal__title">Add Product to Kendra Stock</h3>
       </div>
-      <form id="add-product-form" class="modal__body">
-        <div class="form-group">
-          <label>Generic Name *</label>
-          <input type="text" name="genericName" required placeholder="e.g. Paracetamol 500mg Tablets"
-            class="form-input" />
-        </div>
-        <div class="form-group">
-          <label>Active Chemical Composition *</label>
-          <input type="text" name="composition" required placeholder="e.g. Paracetamol 500mg" class="form-input" />
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Therapeutic Category</label>
-            <input type="text" name="category" placeholder="e.g. Analgesic, Anti-diabetic" class="form-input" />
-          </div>
-          <div class="form-group">
-            <label>Packaging Format *</label>
-            <input type="text" name="packSize" required placeholder="e.g. 10 Tablets / Strip" class="form-input" />
-          </div>
-        </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label>Jan Aushadhi Subsidized MRP (₹) *</label>
-            <input type="number" step="0.1" name="genericMrp" required placeholder="12.50" class="form-input" />
-          </div>
-          <div class="form-group">
-            <label>Initial Units in Stock *</label>
-            <input type="number" name="units" value="50" required class="form-input" />
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Branded Market Equivalent (Name, Manufacturer, Market MRP)</label>
-          <input type="text" name="brandedNote" placeholder="e.g. Calpol 500 - GSK - ₹32.00" class="form-input" />
-        </div>
-
-        <div class="modal__actions">
-          <button type="button" class="btn btn--outline" id="btn-cancel-product">Cancel</button>
-          <button type="submit" class="btn btn--primary">Add to Inventory</button>
-        </div>
-      </form>
+      <button type="button" id="btn-close-product-modal" class="modal__close" aria-label="Close">&times;</button>
     </div>
+    <form id="add-product-form" class="modal__body">
+      <div class="form-group">
+        <label>Generic Drug Formulation *</label>
+        <input type="text" name="genericName" required placeholder="e.g. Paracetamol 500mg Tablets" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Active Chemical Composition *</label>
+        <input type="text" name="composition" required placeholder="e.g. Paracetamol 500mg" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Therapeutic Category *</label>
+        <input type="text" name="category" required placeholder="e.g. Analgesic / Antipyretic" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Pack / Unit Size *</label>
+        <input type="text" name="packSize" required placeholder="e.g. 10 Tablets / Strip" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Subsidized Generic MRP (INR) *</label>
+        <input type="number" step="0.01" name="genericMrp" required placeholder="e.g. 6.50" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Initial Units in Stock *</label>
+        <input type="number" name="units" required placeholder="e.g. 100" class="form-input" />
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <button type="button" id="btn-cancel-product" class="btn btn--outline" style="flex: 1;">Cancel</button>
+        <button type="submit" class="btn btn--primary" style="flex: 2;">Add Formulation to Kendra</button>
+      </div>
+    </form>
   </div>
 
-  <!-- MODAL: User Role Persona Switcher -->
-  <div id="persona-modal-backdrop" class="modal-backdrop" hidden>
-    <div class="modal" role="dialog" aria-modal="true">
-      <div class="modal__header">
-        <h3 class="modal__title">Switch Role &amp; Dashboard View</h3>
-        <button type="button" class="modal__close" id="btn-close-persona-modal">&times;</button>
+  <!-- Out-of-Stock Alert Modal -->
+  <div id="alert-modal-backdrop" class="modal-backdrop" hidden></div>
+  <div id="alert-modal" class="modal" hidden>
+    <div class="modal__header">
+      <div>
+        <span class="badge badge--amber">Out-of-Stock Restock Notification</span>
+        <h3 class="modal__title">Get Notified When Restocked</h3>
       </div>
-      <div class="modal__body">
-        <p class="modal-desc">
-          Test the dedicated powers and views designed for each role:
-        </p>
-
-        <div class="persona-cards" id="persona-cards-container"></div>
-
-        <div class="persona-custom-section">
-          <h4>Quick Switch:</h4>
-          <div class="quick-persona-buttons">
-            <button type="button" class="btn-persona" data-role="customer" data-email="ramesh.sharma@gmail.com">
-              👤 Ramesh Sharma (Customer — Search, Cart, Place Order, Simulate Payment)
-            </button>
-            <button type="button" class="btn-persona" data-role="kendra_owner" data-email="parel.kendra@pmbjp.in">
-              🏥 Sunil Deshmukh (Approved Kendra Owner — Add Medicines &amp; Update Stock)
-            </button>
-            <button type="button" class="btn-persona" data-role="kendra_owner" data-email="anita.kendra@pmbjp.in">
-              ⏳ Anita Saxena (Pending Kendra Owner — Waiting for Admin Acceptance)
-            </button>
-            <button type="button" class="btn-persona" data-role="admin" data-email="admin@rxcompare.gov.in">
-              🛡️ Dr. Rajesh Varma (Admin — Accept/Reject Kendra Requests &amp; System Audit)
-            </button>
-          </div>
-        </div>
-      </div>
+      <button type="button" id="btn-close-alert-modal" class="modal__close" aria-label="Close">&times;</button>
     </div>
+    <form id="stock-alert-form" class="modal__body">
+      <input type="hidden" name="medicineId" id="alert-medicine-id" />
+      <input type="hidden" name="kendraId" id="alert-kendra-id" />
+      <p class="modal__intro">
+        We will alert you the moment <strong id="alert-med-name">Medicine</strong> is back in stock at
+        <strong id="alert-kendra-name">Jan Aushadhi Kendra</strong>.
+      </p>
+      <div class="form-group">
+        <label>Your Full Name *</label>
+        <input type="text" name="customerName" id="alert-customer-name" required class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Email Address *</label>
+        <input type="email" name="customerEmail" id="alert-customer-email" required class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Phone / SMS Alert Number</label>
+        <input type="tel" name="customerPhone" id="alert-customer-phone" placeholder="+91 98765 43210" class="form-input" />
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 15px;">
+        <button type="button" id="btn-cancel-alert" class="btn btn--outline" style="flex: 1;">Cancel</button>
+        <button type="submit" class="btn btn--primary" style="flex: 2;">Register Stock Alert Notification</button>
+      </div>
+    </form>
   </div>
 
   <script type="module" src="/src/main.js"></script>

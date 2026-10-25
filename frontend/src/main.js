@@ -39,6 +39,8 @@ let currentUser = {
 let cart = []; // [{ medicineId, genericName, genericMrp, packSize, quantity, cheapestBrandedMrp }]
 let activeView = "search";
 let lastSearchResults = [];
+let allMedicinesCache = [];
+let activeCategory = "all";
 let currentDrawerMedicine = null;
 let currentKendraInventory = [];
 let userCoords = null;
@@ -151,6 +153,14 @@ const statMedicineCount = document.getElementById("stat-medicine-count");
 const statAvgSavings = document.getElementById("stat-avg-savings");
 const statStoreCount = document.getElementById("stat-store-count");
 
+const searchCategorySelect = document.getElementById("search-category-select");
+const btnHeroCompare = document.getElementById("btn-hero-compare");
+const btnHeroFind = document.getElementById("btn-hero-find");
+const btnHeaderLocate = document.getElementById("btn-header-locate");
+const categoriesRow = document.getElementById("categories-row");
+const catPrevBtn = document.getElementById("cat-prev-btn");
+const catNextBtn = document.getElementById("cat-next-btn");
+
 // View 2 (Customer)
 const customerOrdersList = document.getElementById("customer-orders-list");
 const customerAlertsList = document.getElementById("customer-alerts-list");
@@ -232,13 +242,45 @@ function updateRoleUI() {
   payDeliveryAddress.value = currentUser.address || "";
 }
 
+const DEMO_PERSONAS = {
+  customer: {
+    id: "usr-customer-1",
+    name: "Ramesh Sharma",
+    email: "ramesh.sharma@gmail.com",
+    role: "customer",
+    phone: "+91 98765 43210",
+    address: "B-402, Green Glen Residences, Bellandur, Bengaluru, Karnataka - 560103",
+    status: "active",
+  },
+  kendra: {
+    id: "usr-kendra-1",
+    name: "Sunil Deshmukh",
+    email: "parel.kendra@pmbjp.in",
+    role: "kendra_owner",
+    kendraId: "PMBJK02001",
+    kendraName: "Jan Aushadhi Kendra - KEM Hospital Parel",
+    phone: "+91 98201 44552",
+    status: "approved",
+  },
+  admin: {
+    id: "usr-admin-1",
+    name: "Dr. Rajesh Varma",
+    email: "admin@rxcompare.gov.in",
+    role: "admin",
+    designation: "Chief PMBJP Network Administrator",
+    phone: "+91 11 2338 5642",
+    status: "active",
+  },
+};
+
 function switchUser(user) {
   currentUser = user;
   localStorage.setItem("rxcompare_user", JSON.stringify(user));
   updateRoleUI();
   personaModalBackdrop.hidden = true;
+  const pm = document.getElementById("persona-modal");
+  if (pm) pm.hidden = true;
 
-  // Strict role navigation
   if (currentUser.role === "admin") {
     switchView("admin");
   } else if (currentUser.role === "kendra_owner") {
@@ -249,15 +291,22 @@ function switchUser(user) {
 }
 
 function switchView(viewName) {
-  // Prevent unauthorized view access
-  if (currentUser.role === "customer" && (viewName === "kendra" || viewName === "admin")) {
-    viewName = "search";
-  }
-  if (currentUser.role === "kendra_owner" && (viewName === "customer" || viewName === "admin")) {
-    viewName = "kendra";
-  }
-  if (currentUser.role === "admin" && (viewName === "customer" || viewName === "kendra")) {
-    viewName = "admin";
+  // Ensure the appropriate role persona is active when switching view tabs
+  if (viewName === "kendra" && currentUser.role !== "kendra_owner") {
+    currentUser = DEMO_PERSONAS.kendra;
+    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
+    updateRoleUI();
+    showToast("Active Persona: Sunil Deshmukh (Kendra Owner)", "🏥");
+  } else if (viewName === "admin" && currentUser.role !== "admin") {
+    currentUser = DEMO_PERSONAS.admin;
+    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
+    updateRoleUI();
+    showToast("Active Persona: Dr. Rajesh Varma (Admin)", "🛡️");
+  } else if (viewName === "customer" && currentUser.role !== "customer") {
+    currentUser = DEMO_PERSONAS.customer;
+    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
+    updateRoleUI();
+    showToast("Active Persona: Ramesh Sharma (Customer)", "👤");
   }
 
   activeView = viewName;
@@ -267,6 +316,8 @@ function switchView(viewName) {
   viewPanels.forEach((panel) => {
     panel.classList.toggle("is-active", panel.id === `view-${viewName}`);
   });
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
 
   if (viewName === "customer") loadCustomerDashboard();
   if (viewName === "kendra") loadKendraDashboard();
@@ -426,12 +477,12 @@ function renderCartDrawer() {
 
         <div class="cart-item__right">
           <div class="cart-item__qty">
-            <button type="button" class="btn-qty-sm" data-action="cart-minus" data-id="${esc(item.medicineId)}">-</button>
+            <button type="button" class="btn-qty-sm" data-action="cart-minus" data-id="${esc(item.medicineId)}" aria-label="Decrease quantity">−</button>
             <span class="cart-item__qty-val">${item.quantity}</span>
-            <button type="button" class="btn-qty-sm" data-action="cart-plus" data-id="${esc(item.medicineId)}">+</button>
+            <button type="button" class="btn-qty-sm" data-action="cart-plus" data-id="${esc(item.medicineId)}" aria-label="Increase quantity">+</button>
           </div>
           <div class="cart-item__price">₹${itemSubtotal.toFixed(2)}</div>
-          <button type="button" class="cart-item__remove" data-action="cart-remove" data-id="${esc(item.medicineId)}" title="Remove">&times;</button>
+          <button type="button" class="cart-item__remove" data-action="cart-remove" data-id="${esc(item.medicineId)}" title="Remove item" aria-label="Remove item">&times;</button>
         </div>
       </div>`;
     })
@@ -483,12 +534,14 @@ function openPaymentSimulationModal(orderPayload) {
   posCustomerName.textContent = currentUser.name;
   posKendraName.textContent = orderPayload.kendraName;
   posTotalAmount.textContent = `₹${orderPayload.totalAmount.toFixed(2)}`;
-  payDeliveryAddress.value = currentUser.address || "House 42, Main Road, Bengaluru - 560103";
+  payDeliveryAddress.value = currentUser.address || "B-402, Green Glen Residences, Bellandur, Bengaluru - 560103";
 
   paymentSelectionStep.style.display = "block";
   paymentProgressStep.style.display = "none";
   paymentSuccessStep.style.display = "none";
   paymentModalBackdrop.hidden = false;
+  const pm = document.getElementById("payment-modal");
+  if (pm) pm.hidden = false;
 }
 
 // Payment method card selection highlight
@@ -496,14 +549,20 @@ document.querySelectorAll(".pay-method-card").forEach((card) => {
   card.addEventListener("click", () => {
     document.querySelectorAll(".pay-method-card").forEach((c) => c.classList.remove("is-selected"));
     card.classList.add("is-selected");
+    const radio = card.querySelector("input[type=radio]");
+    if (radio) radio.checked = true;
   });
 });
 
 btnClosePaymentModal.addEventListener("click", () => {
   paymentModalBackdrop.hidden = true;
+  const pm = document.getElementById("payment-modal");
+  if (pm) pm.hidden = true;
 });
 btnCancelPayment.addEventListener("click", () => {
   paymentModalBackdrop.hidden = true;
+  const pm = document.getElementById("payment-modal");
+  if (pm) pm.hidden = true;
 });
 
 btnRunPaymentSim.addEventListener("click", async () => {
@@ -575,6 +634,8 @@ btnRunPaymentSim.addEventListener("click", async () => {
 
 btnViewOrderStatus.addEventListener("click", () => {
   paymentModalBackdrop.hidden = true;
+  const pm = document.getElementById("payment-modal");
+  if (pm) pm.hidden = true;
   switchView("customer");
 });
 
@@ -586,9 +647,9 @@ function medicineCardHTML(medicine, index) {
   const savings = cheapestBranded ? cheapestBranded - medicine.genericMrp : null;
   const savingsPct = cheapestBranded ? Math.round((savings / cheapestBranded) * 100) : null;
 
-  const ribbon =
+  const saveBadge =
     savingsPct !== null
-      ? `<div class="med-card__ribbon" aria-label="Save ${savingsPct} percent"><span>save ${savingsPct}%</span></div>`
+      ? `<span class="med-card__save-badge">save ${savingsPct}%</span>`
       : "";
 
   const rxPill = medicine.prescriptionRequired
@@ -611,12 +672,13 @@ function medicineCardHTML(medicine, index) {
     .join("");
 
   return `
-    <article class="med-card" style="animation-delay:${index * 40}ms" data-id="${esc(medicine.id || medicine._id)}">
-      ${ribbon}
-      
+    <article class="med-card" style="animation-delay:${index * 30}ms" data-id="${esc(medicine.id || medicine._id)}">
       <div class="med-card__top">
         <span class="med-card__category">${esc(medicine.category || "Generic Formulation")}</span>
-        ${rxPill}
+        <div class="med-card__badges-group">
+          ${rxPill}
+          ${saveBadge}
+        </div>
       </div>
 
       <h3 class="med-card__title">${esc(medicine.genericName)}</h3>
@@ -653,14 +715,14 @@ function medicineCardHTML(medicine, index) {
       }
 
       <div class="med-card__actions-row">
-        <button type="button" class="med-card__cta" data-action="locate">
-          ${icon.mapPin} Kendras
+        <button type="button" class="med-card__cta med-card__cta--kendra" data-action="locate">
+          ${icon.mapPin} <span>Find Kendra</span>
         </button>
-        <button type="button" class="med-card__cta" data-action="add-cart" style="background: #ffffff; color: var(--navy); border-color: var(--line-strong);">
-          ${icon.cart} Add to Cart
+        <button type="button" class="med-card__cta med-card__cta--cart" data-action="add-cart">
+          ${icon.cart} <span>Add to Cart</span>
         </button>
-        <button type="button" class="med-card__btn-order" data-action="buy-now" style="grid-column: 1 / -1;">
-          ${icon.bolt} Instant Order &amp; Simulate Payment
+        <button type="button" class="med-card__btn-order" data-action="buy-now">
+          ${icon.bolt} <span>Instant Order &amp; Simulate Payment</span>
         </button>
       </div>
     </article>
@@ -700,27 +762,175 @@ function renderSearchResults({ loading, results, searched, error }) {
   resultsGrid.innerHTML = results.map((m, i) => medicineCardHTML(m, i)).join("");
 }
 
+function applyCategoryFilter(cat) {
+  activeCategory = cat || "";
+
+  if (searchCategorySelect) {
+    searchCategorySelect.value = activeCategory;
+  }
+
+  if (categoriesRow) {
+    categoriesRow.querySelectorAll(".cat-item").forEach((btn) => {
+      const btnCat = btn.dataset.cat || "";
+      btn.classList.toggle("is-active", btnCat.toLowerCase() === activeCategory.toLowerCase());
+    });
+  }
+
+  const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+  let list = allMedicinesCache.length > 0 ? allMedicinesCache : lastSearchResults;
+
+  if (query) {
+    list = list.filter((m) =>
+      (m.genericName || "").toLowerCase().includes(query) ||
+      (m.composition || "").toLowerCase().includes(query) ||
+      (m.category || "").toLowerCase().includes(query) ||
+      (m.searchKeywords || []).some((k) => k.toLowerCase().includes(query)) ||
+      (m.brandedEquivalents || []).some((b) => b.brandName.toLowerCase().includes(query))
+    );
+  }
+
+  if (activeCategory) {
+    list = list.filter((m) =>
+      (m.category || "").toLowerCase().includes(activeCategory.toLowerCase()) ||
+      (m.genericName || "").toLowerCase().includes(activeCategory.toLowerCase())
+    );
+  }
+
+  renderSearchResults({
+    loading: false,
+    results: !activeCategory && !query ? list.slice(0, 9) : list,
+    searched: Boolean(query) || Boolean(activeCategory),
+    error: null,
+  });
+
+  const section = document.getElementById("search-results-section");
+  if (section && (activeCategory || query)) {
+    section.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+}
+
 async function handleSearch(query) {
-  if (!query) return;
+  const cat = searchCategorySelect ? searchCategorySelect.value.trim() : "";
+  if (!query && !cat) {
+    renderSearchResults({ loading: false, results: allMedicinesCache.slice(0, 9), searched: false, error: null });
+    return;
+  }
+
   searchButton.disabled = true;
-  searchButton.textContent = "Querying ABDM…";
+  searchButton.innerHTML = `<span class="spinner-sm"></span> <span>Querying ABDM…</span>`;
   renderSearchResults({ loading: true, results: [], searched: true, error: null });
 
   try {
-    const data = await searchMedicines(query);
+    let data;
+    if (query) {
+      data = await searchMedicines(query);
+    } else {
+      data = allMedicinesCache;
+    }
+
+    if (cat) {
+      data = data.filter((m) =>
+        (m.category || "").toLowerCase().includes(cat.toLowerCase())
+      );
+    }
+
     renderSearchResults({ loading: false, results: data, searched: true, error: null });
+
+    const section = document.getElementById("search-results-section");
+    if (section) {
+      section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   } catch (err) {
     renderSearchResults({ loading: false, results: [], searched: true, error: err.message });
   } finally {
     searchButton.disabled = false;
-    searchButton.textContent = "Compare & Find Kendra";
+    searchButton.innerHTML = `
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+        <circle cx="11" cy="11" r="8" />
+        <path d="m21 21-4.3-4.3" />
+      </svg>
+      <span class="search-btn-text">Compare &amp; Find Kendra</span>`;
   }
 }
+
+// Promo card quick-filter buttons
+document.querySelectorAll(".promo-card__btn").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    const cat = btn.dataset.category;
+    applyCategoryFilter(cat);
+  });
+});
+
+// Service pills
+document.querySelectorAll(".service-pill").forEach((pill) => {
+  pill.addEventListener("click", () => {
+    const cat = pill.dataset.cat;
+    applyCategoryFilter(cat === "all" ? "" : cat);
+  });
+});
+
+// Brand logo button returns to search
+document.getElementById("brand-logo-btn")?.addEventListener("click", () => switchView("search"));
 
 searchForm.addEventListener("submit", (e) => {
   e.preventDefault();
   handleSearch(searchInput.value.trim());
 });
+
+if (searchCategorySelect) {
+  searchCategorySelect.addEventListener("change", (e) => {
+    applyCategoryFilter(e.target.value);
+  });
+}
+
+if (categoriesRow) {
+  categoriesRow.addEventListener("click", (e) => {
+    const btn = e.target.closest(".cat-item");
+    if (!btn) return;
+    const cat = btn.dataset.cat;
+    applyCategoryFilter(cat);
+  });
+}
+
+if (catPrevBtn && categoriesRow) {
+  catPrevBtn.addEventListener("click", () => {
+    categoriesRow.scrollBy({ left: -240, behavior: "smooth" });
+  });
+}
+
+if (catNextBtn && categoriesRow) {
+  catNextBtn.addEventListener("click", () => {
+    categoriesRow.scrollBy({ left: 240, behavior: "smooth" });
+  });
+}
+
+if (btnHeroCompare) {
+  btnHeroCompare.addEventListener("click", (e) => {
+    e.preventDefault();
+    const query = searchInput ? searchInput.value.trim() : "";
+    const cat = searchCategorySelect ? searchCategorySelect.value.trim() : "";
+    if (query || cat) {
+      handleSearch(query);
+    } else {
+      const target = document.getElementById("search-results") || document.getElementById("categories-section");
+      if (target) {
+        target.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    }
+  });
+}
+
+if (btnHeaderLocate) {
+  btnHeaderLocate.addEventListener("click", () => {
+    const targetMed = (lastSearchResults && lastSearchResults.length > 0) ? lastSearchResults[0] : (allMedicinesCache[0] || null);
+    if (targetMed) {
+      openDrawer(targetMed);
+    } else {
+      switchView("search");
+      searchInput.focus();
+    }
+  });
+}
 
 document.querySelectorAll(".quick-tag").forEach((btn) => {
   btn.addEventListener("click", () => {
@@ -875,14 +1085,24 @@ function openDrawer(medicine) {
     : null;
 
   drawerMedBanner.innerHTML = `
-    <div class="drawer__banner-content">
-      <div>
-        <p class="banner-label">Subsidized PMBJP Price</p>
-        <p class="banner-price">₹${medicine.genericMrp.toFixed(2)} <span class="banner-unit">/ ${esc(medicine.packSize || "pack")}</span></p>
+    <div class="drawer-med-card">
+      <div class="drawer-med-card__top">
+        <div class="drawer-med-card__price-col">
+          <span class="drawer-med-card__label">Subsidized PMBJP Price</span>
+          <div class="drawer-med-card__price-row">
+            <span class="drawer-med-card__price">₹${medicine.genericMrp.toFixed(2)}</span>
+            <span class="drawer-med-card__unit">/ ${esc(medicine.packSize || "strip of 10 tablets")}</span>
+          </div>
+        </div>
+        ${savingsPct ? `<span class="drawer-med-card__save-tag">Save ${savingsPct}% vs Branded</span>` : ""}
       </div>
-      ${savingsPct ? `<span class="banner-savings">Save ${savingsPct}% vs Branded</span>` : ""}
+      <div class="drawer-med-card__info-row">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+        <span>Direct purchase counter available at certified Kendras below:</span>
+      </div>
     </div>
-    <p class="banner-note">Direct purchase counter available at certified Kendras below:</p>
   `;
 
   drawer.classList.add("is-open");
@@ -963,13 +1183,19 @@ function openAlertModal(medicine, kendraId = null) {
   alertMedName.textContent = medicine.genericName;
   alertKendraName.textContent = kendraId ? `Kendra ${kendraId}` : "Any Nearby Kendra";
   alertModalBackdrop.hidden = false;
+  const am = document.getElementById("alert-modal");
+  if (am) am.hidden = false;
 }
 
 document.getElementById("btn-close-alert-modal").addEventListener("click", () => {
   alertModalBackdrop.hidden = true;
+  const am = document.getElementById("alert-modal");
+  if (am) am.hidden = true;
 });
 document.getElementById("btn-cancel-alert").addEventListener("click", () => {
   alertModalBackdrop.hidden = true;
+  const am = document.getElementById("alert-modal");
+  if (am) am.hidden = true;
 });
 
 stockAlertForm.addEventListener("submit", async (e) => {
@@ -991,6 +1217,8 @@ stockAlertForm.addEventListener("submit", async (e) => {
     });
 
     alertModalBackdrop.hidden = true;
+    const am = document.getElementById("alert-modal");
+    if (am) am.hidden = true;
     showToast(`Subscribed! We will alert ${customerEmail} upon restock`, "🔔");
 
     currentUser.name = customerName || currentUser.name;
@@ -1009,17 +1237,24 @@ stockAlertForm.addEventListener("submit", async (e) => {
 // ---------------------------------------------------------------------
 btnOpenAddMed.addEventListener("click", () => {
   if (currentUser.role !== "kendra_owner") {
-    alert("Please switch to a Kendra Owner persona to add products.");
-    return;
+    currentUser = DEMO_PERSONAS.kendra;
+    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
+    updateRoleUI();
   }
   addProductModalBackdrop.hidden = false;
+  const apm = document.getElementById("add-product-modal");
+  if (apm) apm.hidden = false;
 });
 
 document.getElementById("btn-close-product-modal").addEventListener("click", () => {
   addProductModalBackdrop.hidden = true;
+  const apm = document.getElementById("add-product-modal");
+  if (apm) apm.hidden = true;
 });
 document.getElementById("btn-cancel-product").addEventListener("click", () => {
   addProductModalBackdrop.hidden = true;
+  const apm = document.getElementById("add-product-modal");
+  if (apm) apm.hidden = true;
 });
 
 addProductForm.addEventListener("submit", async (e) => {
@@ -1039,6 +1274,8 @@ addProductForm.addEventListener("submit", async (e) => {
   try {
     await addMedicineToKendra(kendraId, medData);
     addProductModalBackdrop.hidden = true;
+    const apm = document.getElementById("add-product-modal");
+    if (apm) apm.hidden = true;
     addProductForm.reset();
     showToast("Formulation successfully added to Kendra inventory!", "✓");
     loadKendraDashboard();
@@ -1052,19 +1289,25 @@ addProductForm.addEventListener("submit", async (e) => {
 // ---------------------------------------------------------------------
 btnOpenPersona.addEventListener("click", async () => {
   personaModalBackdrop.hidden = false;
+  const pm = document.getElementById("persona-modal");
+  if (pm) pm.hidden = false;
+
   const container = document.getElementById("persona-cards-container");
-  container.innerHTML = `<p class="text-subtle">Loading persona credentials…</p>`;
+  container.innerHTML = `<p class="text-subtle" style="padding: 12px; text-align: center;">Loading persona credentials…</p>`;
 
   try {
     const res = await getDemoUsers();
     container.innerHTML = res.users
       .map(
         (u) => `
-        <div class="persona-card-item">
+        <div class="persona-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border: 1px solid var(--border-line); border-radius: 8px; margin-bottom: 8px; background: #ffffff;">
           <div>
-            <strong>${esc(u.name)}</strong>
-            <span class="user-pill__role-tag" style="margin-left: 6px;">${esc(u.role)}</span>
-            <p class="text-subtle" style="margin: 2px 0 0;">${esc(u.email)} ${u.kendraName ? `· ${esc(u.kendraName)}` : ""}</p>
+            <div style="font-weight: 700; color: var(--navy-deep); font-size: 0.95rem;">
+              ${esc(u.name)}
+              <span class="user-pill__role-tag" style="margin-left: 6px; font-size: 0.72rem; padding: 2px 6px;">${esc(u.role)}</span>
+              ${u.status === "pending" ? `<span class="badge badge--amber" style="margin-left: 4px; font-size: 0.7rem;">Pending</span>` : ""}
+            </div>
+            <p class="text-subtle" style="margin: 2px 0 0; font-size: 0.8rem;">${esc(u.email)} ${u.kendraName ? `· ${esc(u.kendraName)}` : ""}</p>
           </div>
           <button type="button" class="btn btn--outline btn--sm" data-action="switch-to-user" data-user='${JSON.stringify(u)}'>
             Login as ${u.name.split(" ")[0]}
@@ -1073,12 +1316,14 @@ btnOpenPersona.addEventListener("click", async () => {
       )
       .join("");
   } catch (err) {
-    container.innerHTML = `<p class="drawer__status--error">Failed to load personas.</p>`;
+    container.innerHTML = `<p class="drawer__status--error">Failed to load personas: ${err.message}</p>`;
   }
 });
 
 document.getElementById("btn-close-persona-modal").addEventListener("click", () => {
   personaModalBackdrop.hidden = true;
+  const pm = document.getElementById("persona-modal");
+  if (pm) pm.hidden = true;
 });
 
 document.getElementById("persona-cards-container").addEventListener("click", (e) => {
@@ -1605,6 +1850,7 @@ async function initApp() {
     ]);
 
     if (medicines && medicines.length > 0) {
+      allMedicinesCache = medicines;
       statMedicineCount.textContent = `${medicines.length}+`;
       statStoreCount.textContent = status ? `${status.totalKendras}` : "12+";
 
@@ -1621,5 +1867,13 @@ async function initApp() {
     // Graceful fallback
   }
 }
+
+// Footer navigation links
+document.querySelectorAll(".footer__link[data-view]").forEach((link) => {
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    switchView(link.dataset.view);
+  });
+});
 
 initApp();

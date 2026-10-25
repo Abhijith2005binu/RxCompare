@@ -1,0 +1,7 @@
+{
+  "name": "RxCompare",
+  "description": "Prescription-to-Generic Medicine Price Comparator and Jan Aushadhi Kendra Locator under PMBJP and ABDM Network.",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
