@@ -144,7 +144,7 @@
           <!-- Central Search Bar Container (with Category dropdown matching reference) -->
           <form id="search-form" class="search-bar">
             <div class="search-bar__category">
-              <select id="search-category-select" class="search-bar__category-select">
+              <select id="search-category-select" class="search-bar__category-native" tabindex="-1" aria-hidden="true">
                 <option value="">All categories</option>
                 <option value="Analgesic">Analgesic / Antipyretic</option>
                 <option value="Antibiotic">Antibiotic</option>
@@ -155,9 +155,13 @@
                 <option value="Vitamins">Vitamins &amp; Supplements</option>
                 <option value="Antifungal">Antifungal</option>
               </select>
-              <svg class="search-bar__chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="6 9 12 15 18 9" />
-              </svg>
+              <button type="button" id="search-category-trigger" class="search-bar__category-trigger" aria-haspopup="listbox" aria-expanded="false" aria-controls="search-category-options">
+                <span id="search-category-label">All categories</span>
+                <svg class="search-bar__chevron" viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <polyline points="6 9 12 15 18 9" />
+                </svg>
+              </button>
+              <div id="search-category-options" class="search-bar__category-options" role="listbox" aria-label="Medicine category" hidden></div>
             </div>
             
             <div class="search-bar__divider"></div>
@@ -1051,6 +1055,9 @@
         </button>
       </div>
     </div>
+  </div>
+  </div>
+  </div>
   </div>
 
   <!-- Persona Switcher Modal -->

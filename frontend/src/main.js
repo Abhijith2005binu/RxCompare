@@ -36,6 +36,7 @@ let currentUser = {
   status: "active",
 };
 
+let availablePersonaUsers = [];
 let cart = []; // [{ medicineId, genericName, genericMrp, packSize, quantity, cheapestBrandedMrp }]
 let activeView = "search";
 let lastSearchResults = [];
@@ -154,6 +155,10 @@ const statAvgSavings = document.getElementById("stat-avg-savings");
 const statStoreCount = document.getElementById("stat-store-count");
 
 const searchCategorySelect = document.getElementById("search-category-select");
+const searchCategory = document.querySelector(".search-bar__category");
+const searchCategoryTrigger = document.getElementById("search-category-trigger");
+const searchCategoryLabel = document.getElementById("search-category-label");
+const searchCategoryOptions = document.getElementById("search-category-options");
 const btnHeroCompare = document.getElementById("btn-hero-compare");
 const btnHeroFind = document.getElementById("btn-hero-find");
 const btnHeaderLocate = document.getElementById("btn-header-locate");
@@ -262,6 +267,16 @@ const DEMO_PERSONAS = {
     phone: "+91 98201 44552",
     status: "approved",
   },
+  pendingKendra: {
+    id: "usr-kendra-2",
+    name: "Anita Saxena",
+    email: "anita.kendra@pmbjp.in",
+    role: "kendra_owner",
+    kendraId: "PMBJK-APP-99",
+    kendraName: "Jan Aushadhi Kendra - Rohini Sector 7",
+    phone: "+91 98112 33445",
+    status: "pending",
+  },
   admin: {
     id: "usr-admin-1",
     name: "Dr. Rajesh Varma",
@@ -272,6 +287,13 @@ const DEMO_PERSONAS = {
     status: "active",
   },
 };
+
+const LOCAL_DEMO_USERS = [
+  DEMO_PERSONAS.admin,
+  DEMO_PERSONAS.kendra,
+  DEMO_PERSONAS.pendingKendra,
+  DEMO_PERSONAS.customer,
+];
 
 function switchUser(user) {
   currentUser = user;
@@ -762,11 +784,124 @@ function renderSearchResults({ loading, results, searched, error }) {
   resultsGrid.innerHTML = results.map((m, i) => medicineCardHTML(m, i)).join("");
 }
 
+function syncCategoryDropdown() {
+  if (!searchCategorySelect || !searchCategoryLabel || !searchCategoryOptions) return;
+
+  const selectedOption = searchCategorySelect.options[searchCategorySelect.selectedIndex];
+  searchCategoryLabel.textContent = selectedOption ? selectedOption.textContent : "All categories";
+
+  searchCategoryOptions.querySelectorAll('[role="option"]').forEach((option) => {
+    const selected = option.dataset.value === searchCategorySelect.value;
+    option.setAttribute("aria-selected", String(selected));
+    option.classList.toggle("is-selected", selected);
+  });
+}
+
+function setCategoryDropdownOpen(open, focusSelected = false) {
+  if (!searchCategory || !searchCategoryTrigger || !searchCategoryOptions) return;
+
+  searchCategory.classList.toggle("is-open", open);
+  searchCategoryTrigger.setAttribute("aria-expanded", String(open));
+  searchCategoryOptions.hidden = !open;
+
+  if (open && focusSelected) {
+    searchCategoryOptions.querySelector('[aria-selected="true"]')?.focus();
+  }
+}
+
+function initializeCategoryDropdown() {
+  if (!searchCategorySelect || !searchCategoryOptions) return;
+
+  const options = Array.from(searchCategorySelect.options, (nativeOption) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.tabIndex = -1;
+    option.className = "search-bar__category-option";
+    option.setAttribute("role", "option");
+    option.dataset.value = nativeOption.value;
+
+    const label = document.createElement("span");
+    label.textContent = nativeOption.textContent;
+    option.append(label);
+
+    const check = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    check.setAttribute("viewBox", "0 0 20 20");
+    check.setAttribute("width", "16");
+    check.setAttribute("height", "16");
+    check.setAttribute("fill", "none");
+    check.setAttribute("aria-hidden", "true");
+    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+    path.setAttribute("d", "m4 10 4 4 8-8");
+    path.setAttribute("stroke", "currentColor");
+    path.setAttribute("stroke-width", "2");
+    path.setAttribute("stroke-linecap", "round");
+    path.setAttribute("stroke-linejoin", "round");
+    check.append(path);
+    option.append(check);
+
+    option.addEventListener("click", () => {
+      searchCategorySelect.value = nativeOption.value;
+      searchCategorySelect.dispatchEvent(new Event("change", { bubbles: true }));
+      searchCategoryTrigger.focus();
+      setCategoryDropdownOpen(false);
+    });
+
+    option.addEventListener("keydown", (event) => {
+      const allOptions = Array.from(searchCategoryOptions.querySelectorAll('[role="option"]'));
+      const currentIndex = allOptions.indexOf(option);
+      let nextIndex = currentIndex;
+
+      if (event.key === "ArrowDown") nextIndex = (currentIndex + 1) % allOptions.length;
+      else if (event.key === "ArrowUp") nextIndex = (currentIndex - 1 + allOptions.length) % allOptions.length;
+      else if (event.key === "Home") nextIndex = 0;
+      else if (event.key === "End") nextIndex = allOptions.length - 1;
+      else if (event.key === "Escape") {
+        event.preventDefault();
+        setCategoryDropdownOpen(false);
+        searchCategoryTrigger.focus();
+        return;
+      } else {
+        return;
+      }
+
+      event.preventDefault();
+      allOptions[nextIndex].focus();
+    });
+
+    return option;
+  });
+
+  searchCategoryOptions.replaceChildren(...options);
+  searchCategoryTrigger.addEventListener("click", () => {
+    setCategoryDropdownOpen(searchCategoryOptions.hidden, searchCategoryOptions.hidden);
+  });
+  searchCategoryTrigger.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      setCategoryDropdownOpen(false);
+      return;
+    }
+    if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
+    event.preventDefault();
+    setCategoryDropdownOpen(true, true);
+  });
+  document.addEventListener("pointerdown", (event) => {
+    if (!searchCategory.contains(event.target)) setCategoryDropdownOpen(false);
+  });
+  document.addEventListener("focusin", (event) => {
+    if (!searchCategory.contains(event.target)) setCategoryDropdownOpen(false);
+  });
+  searchCategorySelect.addEventListener("change", syncCategoryDropdown);
+  syncCategoryDropdown();
+}
+
+initializeCategoryDropdown();
+
 function applyCategoryFilter(cat) {
   activeCategory = cat || "";
 
   if (searchCategorySelect) {
     searchCategorySelect.value = activeCategory;
+    syncCategoryDropdown();
   }
 
   if (categoriesRow) {
@@ -1287,6 +1422,25 @@ addProductForm.addEventListener("submit", async (e) => {
 // ---------------------------------------------------------------------
 // User Role Persona Switcher
 // ---------------------------------------------------------------------
+function renderPersonaUsers(users) {
+  return users
+    .map((user) => `
+      <div class="persona-item">
+        <div>
+          <div style="font-weight: 700; color: var(--navy-deep); font-size: 0.95rem;">
+            ${esc(user.name)}
+            <span class="user-pill__role-tag" style="margin-left: 6px; font-size: 0.72rem; padding: 2px 6px;">${esc(user.role)}</span>
+            ${user.status === "pending" ? `<span class="badge badge--amber" style="margin-left: 4px; font-size: 0.7rem;">Pending</span>` : ""}
+          </div>
+          <p class="text-subtle" style="margin: 2px 0 0; font-size: 0.8rem;">${esc(user.email)} ${user.kendraName ? `· ${esc(user.kendraName)}` : ""}</p>
+        </div>
+        <button type="button" class="btn btn--outline btn--sm" data-action="switch-to-user" data-email="${esc(user.email)}">
+          Login as ${esc(user.name.split(" ")[0])}
+        </button>
+      </div>`)
+    .join("");
+}
+
 btnOpenPersona.addEventListener("click", async () => {
   personaModalBackdrop.hidden = false;
   const pm = document.getElementById("persona-modal");
@@ -1297,26 +1451,18 @@ btnOpenPersona.addEventListener("click", async () => {
 
   try {
     const res = await getDemoUsers();
-    container.innerHTML = res.users
-      .map(
-        (u) => `
-        <div class="persona-item" style="display: flex; justify-content: space-between; align-items: center; padding: 12px 14px; border: 1px solid var(--border-line); border-radius: 8px; margin-bottom: 8px; background: #ffffff;">
-          <div>
-            <div style="font-weight: 700; color: var(--navy-deep); font-size: 0.95rem;">
-              ${esc(u.name)}
-              <span class="user-pill__role-tag" style="margin-left: 6px; font-size: 0.72rem; padding: 2px 6px;">${esc(u.role)}</span>
-              ${u.status === "pending" ? `<span class="badge badge--amber" style="margin-left: 4px; font-size: 0.7rem;">Pending</span>` : ""}
-            </div>
-            <p class="text-subtle" style="margin: 2px 0 0; font-size: 0.8rem;">${esc(u.email)} ${u.kendraName ? `· ${esc(u.kendraName)}` : ""}</p>
-          </div>
-          <button type="button" class="btn btn--outline btn--sm" data-action="switch-to-user" data-user='${JSON.stringify(u)}'>
-            Login as ${u.name.split(" ")[0]}
-          </button>
-        </div>`
-      )
-      .join("");
+    if (!Array.isArray(res.users) || res.users.length === 0) {
+      throw new Error("No demo users are available from the server");
+    }
+    availablePersonaUsers = res.users;
+    container.innerHTML = renderPersonaUsers(availablePersonaUsers);
   } catch (err) {
-    container.innerHTML = `<p class="drawer__status--error">Failed to load personas: ${err.message}</p>`;
+    availablePersonaUsers = LOCAL_DEMO_USERS;
+    container.innerHTML = `
+      <p class="text-subtle" role="status" style="margin: 0 0 12px;">
+        The server is unavailable; local demo profiles are available.
+      </p>
+      ${renderPersonaUsers(availablePersonaUsers)}`;
   }
 });
 
@@ -1329,7 +1475,11 @@ document.getElementById("btn-close-persona-modal").addEventListener("click", () 
 document.getElementById("persona-cards-container").addEventListener("click", (e) => {
   const btn = e.target.closest('[data-action="switch-to-user"]');
   if (!btn) return;
-  const user = JSON.parse(btn.dataset.user);
+  const user = availablePersonaUsers.find((persona) => persona.email === btn.dataset.email);
+  if (!user) {
+    showToast("That demo profile is no longer available. Reopen the role switcher and try again.", "!");
+    return;
+  }
   switchUser(user);
 });
 
