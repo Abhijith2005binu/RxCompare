@@ -164,7 +164,10 @@ input, select, textarea {
   max-width: 1280px;
   margin: 0 auto;
   padding: 0 24px;
-  height: 74px;
+  height: auto;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  flex-wrap: wrap;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -173,6 +176,8 @@ input, select, textarea {
 
 .nav__brand-group {
   display: flex;
+  flex: 1;
+  min-width: 0;
   align-items: center;
 }
 
@@ -281,6 +286,7 @@ input, select, textarea {
   display: flex;
   align-items: center;
   gap: 12px;
+  margin-left: auto;
 }
 
 .btn-icon-nav {
@@ -453,28 +459,49 @@ input, select, textarea {
   position: relative;
   display: flex;
   align-items: center;
-  padding-right: 6px;
+  padding: 4px 10px 4px 12px;
+  border: 1px solid #dbe8e2;
+  border-radius: var(--radius-md);
+  background: #f4faf7;
   flex-shrink: 0;
+  transition: border-color 150ms ease, background-color 150ms ease, box-shadow 150ms ease;
+}
+
+.search-bar__category:focus-within {
+  border-color: var(--pmbjp-green);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(0, 104, 74, 0.1);
 }
 
 .search-bar__category-select {
   appearance: none;
   border: none;
   background: transparent;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 600;
-  color: var(--dark-navy-soft);
-  padding: 8px 22px 8px 0;
+  color: var(--pmbjp-green-dark);
+  padding: 6px 22px 6px 0;
   cursor: pointer;
   outline: none;
   line-height: 1.2;
 }
 
+.search-bar__category-select option {
+  background: #ffffff;
+  color: var(--dark-navy);
+  font-weight: 500;
+}
+
 .search-bar__chevron {
   position: absolute;
-  right: 4px;
+  right: 10px;
   pointer-events: none;
-  color: var(--ink-subtle);
+  color: var(--pmbjp-green);
+  transition: transform 150ms ease;
+}
+
+.search-bar__category:focus-within .search-bar__chevron {
+  transform: rotate(180deg);
 }
 
 .search-bar__divider {
@@ -1024,12 +1051,13 @@ input, select, textarea {
 /* 3-Column Medicine Cards Grid */
 .app__results {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
   gap: 24px;
 }
 
 /* Medicine Card Component */
 .med-card {
+  min-width: 0;
   background-color: #ffffff;
   border: 1px solid var(--border-line);
   border-radius: var(--radius-lg);
@@ -1069,7 +1097,11 @@ input, select, textarea {
 
 .med-card__badges-group {
   display: flex;
+  flex: 1 0 100%;
+  order: 3;
   align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
   gap: 6px;
 }
 
@@ -2592,6 +2624,10 @@ input, select, textarea {
     gap: 8px;
   }
 
+  .nav__tabs {
+    justify-content: flex-start;
+  }
+
   .user-pill__name {
     display: none; /* Save space on mobile, show role and switch button */
   }
@@ -2645,7 +2681,8 @@ input, select, textarea {
   .search-bar__category {
     width: 100%;
     border-bottom: 1px solid var(--border-line);
-    padding: 6px 4px;
+    border-radius: var(--radius-md);
+    padding: 6px 12px;
     justify-content: space-between;
   }
 
@@ -2758,7 +2795,7 @@ input, select, textarea {
   }
 
   .app__results {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
     gap: 16px;
   }
 
@@ -2861,6 +2898,25 @@ input, select, textarea {
 }
 
 @media (max-width: 480px) {
+  .nav__right {
+    display: grid;
+    grid-template-columns: max-content max-content;
+    justify-content: space-between;
+    width: 100%;
+    margin-left: 0;
+    gap: 8px;
+  }
+
+  .btn-cart {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .user-pill {
+    padding-right: 8px;
+    padding-left: 8px;
+  }
+
   .hero__title {
     font-size: 23px;
   }

@@ -6911,6 +6911,7 @@ module.exports = [
     ]
   }
 ];
+/*
  * Expanded seed data — ~65 formulations spanning pain relief, antibiotics,
  * cardiac, diabetes, gastro, respiratory/allergy, CNS/psychiatric, thyroid,
  * urology, dermatology, antifungal, and supplements.
