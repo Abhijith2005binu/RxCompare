@@ -210,6 +210,7 @@
               <dt>Average citizen savings</dt>
               <dd id="stat-avg-savings">—</dd>
             </div>
+
             <div class="hero__stat">
               <dt>Active PMBJP Kendras</dt>
               <dd id="stat-store-count">—</dd>
@@ -851,6 +852,101 @@
       </div>
       <button type="button" id="btn-close-payment-modal" class="modal__close" aria-label="Close">&times;</button>
     </div>
+  <!-- INTERACTIVE PAYMENT SIMULATION MODAL -->
+  <div id="payment-modal-backdrop" class="modal-backdrop" hidden>
+    <div class="modal modal--payment" role="dialog" aria-modal="true">
+      <div class="modal__header">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span class="pay-lock-icon">🔒</span>
+          <h3 class="modal__title">Payment Gateway</h3>
+        </div>
+        <button type="button" class="modal__close" id="btn-close-payment-modal">&times;</button>
+      </div>
+
+      <div class="modal__body" id="payment-modal-content">
+        <!-- Step 1: Payment Method Selection -->
+        <div id="payment-selection-step">
+          <div class="payment-order-summary">
+            <div class="pos-row">
+              <span class="pos-label">Recipient:</span>
+              <strong id="pos-customer-name">—</strong>
+            </div>
+            <div class="pos-row">
+              <span class="pos-label">Fulfilling Kendra:</span>
+              <strong id="pos-kendra-name">—</strong>
+            </div>
+            <div class="pos-row">
+              <span class="pos-label">Total Subsidized Amount:</span>
+              <strong id="pos-total-amount" class="text-emerald" style="font-size: 1.25rem;">₹0.00</strong>
+            </div>
+          </div>
+
+          <p class="modal-desc" style="margin-top: 10px;">Select a simulated payment method to complete your generic
+            medicine order:</p>
+
+          <div class="payment-methods-grid">
+            <!-- Method 1: UPI -->
+            <label class="pay-method-card is-selected">
+              <input type="radio" name="paymentSimulationOption" value="UPI" checked />
+              <div class="pay-method-content">
+                <div class="pay-method-title">
+                  <span>⚡ UPI Instant Pay </span>
+                </div>
+                <p class="pay-method-sub">Instant zero-fee generic medicine subsidy clearance</p>
+
+                <div class="upi-sim-qr-box">
+                  <div class="upi-qr-graphic">
+                    <div class="qr-pattern"></div>
+                  </div>
+                  <div class="upi-qr-details">
+                    <span class="upi-vpa">VPA: <strong>pmbjp.janaushadhi@sbi</strong></span>
+                    <span class="upi-tag">PMBJP Certified Merchant</span>
+                  </div>
+                </div>
+              </div>
+            </label>
+
+            <!-- Method 2: Card / Net Banking -->
+            <label class="pay-method-card">
+              <input type="radio" name="paymentSimulationOption" value="Card" />
+              <div class="pay-method-content">
+                <div class="pay-method-title">
+                  <span>💳 RuPay / Debit Card / Net Banking</span>
+                </div>
+                <p class="pay-method-sub">Simulate RBI OTP verification with mock RuPay card</p>
+                <div class="mock-card-preview">
+                  <span>RuPay Card •••• 4022</span>
+                  <span class="text-emerald">Validated</span>
+                </div>
+              </div>
+            </label>
+
+            <!-- Method 3: COD -->
+            <label class="pay-method-card">
+              <input type="radio" name="paymentSimulationOption" value="Cash" />
+              <div class="pay-method-content">
+                <div class="pay-method-title">
+                  <span>💵 Pay on Delivery / Counter Pickup</span>
+                </div>
+                <p class="pay-method-sub">Pay directly with cash or UPI at delivery doorstep or Kendra counter</p>
+              </div>
+            </label>
+          </div>
+
+          <!-- Customer Details Form Fields (if not already filled) -->
+          <div class="form-group" style="margin-top: 12px;">
+            <label>Delivery Address</label>
+            <input type="text" id="pay-delivery-address" class="form-input"
+              placeholder="House/Flat No, Landmark, City, Pincode" />
+          </div>
+
+          <div class="modal__actions" style="margin-top: 16px;">
+            <button type="button" class="btn btn--outline" id="btn-cancel-payment">Cancel</button>
+            <button type="button" class="btn btn--primary btn--large" id="btn-run-payment-sim">
+              Pay Now &rarr;
+            </button>
+          </div>
+        </div>
 
     <div class="modal__body">
       <!-- Order Quick Summary -->
@@ -945,6 +1041,10 @@
             <span id="receipt-amount">₹0.00</span>
           </div>
         </div>
+        <div class="form-group">
+          <label>Branded Market Equivalent (Name, Manufacturer, MRP)</label>
+          <input type="text" name="brandedNote" placeholder="e.g. Calpol 500 - GSK - ₹32.00" class="form-input" />
+        </div>
 
         <button type="button" class="btn btn--primary full-width" id="btn-view-order-status">
           View Order in My Account &amp; Track Status
@@ -1020,6 +1120,23 @@
       <div>
         <span class="badge badge--amber">Out-of-Stock Restock Notification</span>
         <h3 class="modal__title">Get Notified When Restocked</h3>
+        <div class="persona-custom-section">
+          <h4>Quick Switch:</h4>
+          <div class="quick-persona-buttons">
+            <button type="button" class="btn-persona" data-role="customer" data-email="ramesh.sharma@gmail.com">
+              👤 Ramesh Sharma (Customer)
+            </button>
+            <button type="button" class="btn-persona" data-role="kendra_owner" data-email="parel.kendra@pmbjp.in">
+              🏥 Sunil Deshmukh (Approved Kendra Owner)
+            </button>
+            <button type="button" class="btn-persona" data-role="kendra_owner" data-email="anita.kendra@pmbjp.in">
+              ⏳ Anita Saxena (Pending Kendra Owner — Waiting for Admin Acceptance)
+            </button>
+            <button type="button" class="btn-persona" data-role="admin" data-email="admin@rxcompare.gov.in">
+              🛡️ Dr. Rajesh Varma (Admin)
+            </button>
+          </div>
+        </div>
       </div>
       <button type="button" id="btn-close-alert-modal" class="modal__close" aria-label="Close">&times;</button>
     </div>
