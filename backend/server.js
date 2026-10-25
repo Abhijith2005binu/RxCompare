@@ -52,4 +52,4 @@ connectDB().then(() => {
   app.listen(PORT, () =>
     console.log(`[server] RxCompare API running at http://localhost:${PORT}`)
   );
-});
+}); 

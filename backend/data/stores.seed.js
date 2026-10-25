@@ -1,9 +1,9 @@
 /**
- * SAMPLE static store list. Real Kendra addresses/coordinates should be
- * pulled from the PMBJP Kendra locator (janaushadhi.gov.in -> "Find Your
- * Nearest Kendra") for whichever district(s) your report covers.
- * Coordinates below are approximate town-center locations, not verified
- * exact Kendra addresses — swap in real ones before submission.
+ * SAMPLE static store list, now covering all 14 Kerala districts (16
+ * entries). Coordinates are approximate town-center locations, not
+ * verified exact Kendra addresses — before submission, swap these for
+ * real addresses/coordinates from the PMBJP Kendra locator at
+ * janaushadhi.gov.in -> "Find Your Nearest Kendra".
  */
 
 module.exports = [
@@ -96,5 +96,59 @@ module.exports = [
     pincode: "678001",
     phone: "0491-2534400",
     location: { lat: 10.7743, lng: 76.6548 },
+  },
+  {
+    name: "Jan Aushadhi Kendra - Kannur Town",
+    address: "Near Kannur Town Railway Station, Kannur",
+    city: "Kannur",
+    state: "Kerala",
+    pincode: "670001",
+    phone: "0497-2706600",
+    location: { lat: 11.8745, lng: 75.3704 },
+  },
+  {
+    name: "Jan Aushadhi Kendra - Kasaragod Town",
+    address: "Near Civil Station, Kasaragod",
+    city: "Kasaragod",
+    state: "Kerala",
+    pincode: "671121",
+    phone: "0499-4230500",
+    location: { lat: 12.4996, lng: 74.9869 },
+  },
+  {
+    name: "Jan Aushadhi Kendra - Malappuram Town",
+    address: "Near Civil Station, Malappuram",
+    city: "Malappuram",
+    state: "Kerala",
+    pincode: "676505",
+    phone: "0483-2734400",
+    location: { lat: 11.0510, lng: 76.0711 },
+  },
+  {
+    name: "Jan Aushadhi Kendra - Kalpetta (Wayanad)",
+    address: "Near Civil Station, Kalpetta, Wayanad",
+    city: "Wayanad",
+    state: "Kerala",
+    pincode: "673121",
+    phone: "0493-6202700",
+    location: { lat: 11.6081, lng: 76.0833 },
+  },
+  {
+    name: "Jan Aushadhi Kendra - Idukki Town (Painavu)",
+    address: "Near Civil Station, Painavu, Idukki",
+    city: "Idukki",
+    state: "Kerala",
+    pincode: "685603",
+    phone: "0486-6232300",
+    location: { lat: 9.8500, lng: 76.9700 },
+  },
+  {
+    name: "Jan Aushadhi Kendra - Pathanamthitta Town",
+    address: "Near Civil Station, Pathanamthitta",
+    city: "Pathanamthitta",
+    state: "Kerala",
+    pincode: "689645",
+    phone: "0468-2222500",
+    location: { lat: 9.2648, lng: 76.7870 },
   },
 ];
