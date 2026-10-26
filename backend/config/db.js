@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 let isConnected = false;
 
-const DEFAULT_URI = "mongodb://127.0.0.1:27017/rxcompare";
+const DEFAULT_URI = "mongodb+srv://abhijithedayate779_db_user:ktzb9i8zkotQWOKq@cluster0.l4ibnky.mongodb.net/";//"mongodb://127.0.0.1:27017/rxcompare";
 
 async function connectDB({ required = true } = {}) {
   const uri = process.env.MONGO_URI || DEFAULT_URI;
@@ -10,7 +10,7 @@ async function connectDB({ required = true } = {}) {
   mongoose.set("bufferCommands", false);
 
   try {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 20000 });
     isConnected = true;
     console.log(`[db] connected -> ${uri}`);
     return true;

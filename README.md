@@ -45,7 +45,7 @@ RxCompare/
 ### 1. Prerequisites
 
 - **Node.js** v18+
-- **MongoDB** running locally (the app is tested against MongoDB 8.x)
+- **MongoDB Atlas** cluster (or a local MongoDB 8.x instance for offline development)
 - A modern browser (Leaflet and OpenStreetMap tiles require internet access)
 
 Install the workspace dependencies from the repository root:
@@ -59,7 +59,7 @@ npm install
 Copy `.env.example` to `.env` in the repository root and adjust if needed:
 
 ```bash
-MONGO_URI=mongodb://127.0.0.1:27017/rxcompare
+MONGO_URI=mongodb+srv://<username>:<password>@<cluster>.mongodb.net/rxcompare?retryWrites=true&w=majority
 JWT_SECRET=replace-with-a-long-random-string
 APP_URL=http://localhost:3000
 
