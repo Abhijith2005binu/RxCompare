@@ -1,26 +1,46 @@
 const API_URL = import.meta.env.VITE_API_URL || "/api";
 
+/**
+ * All requests send the httpOnly auth cookie so the backend can identify the
+ * signed-in customer / Kendra owner / administrator.
+ */
 async function handle(res) {
+  const body = await res.json().catch(() => ({}));
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
-    throw new Error(body.error || `Request failed (${res.status})`);
+    const error = new Error(body.error || `Request failed (${res.status})`);
+    error.status = res.status;
+    error.code = body.code || null;
+    error.details = body.details || null;
+    error.body = body;
+    throw error;
   }
-  return res.json();
+  return body;
+}
+
+function request(path, options = {}) {
+  return fetch(`${API_URL}${path}`, {
+    credentials: "include",
+    ...options,
+    headers: {
+      ...(options.body ? { "Content-Type": "application/json" } : {}),
+      ...(options.headers || {}),
+    },
+  }).then(handle);
 }
 
 // -----------------------------------------------------------------------------
 // Core Medicine & Kendra Search
 // -----------------------------------------------------------------------------
 export function searchMedicines(query) {
-  return fetch(`${API_URL}/medicines/search?q=${encodeURIComponent(query)}`).then(handle);
+  return request(`/medicines/search?q=${encodeURIComponent(query)}`);
 }
 
 export function getAllMedicines() {
-  return fetch(`${API_URL}/medicines`).then(handle);
+  return request("/medicines");
 }
 
 export function getMedicineById(id) {
-  return fetch(`${API_URL}/medicines/${encodeURIComponent(id)}`).then(handle);
+  return request(`/medicines/${encodeURIComponent(id)}`);
 }
 
 export function getKendrasForMedicine(medicineId, { lat, lng, inStockOnly = false, city = "", limit = 10 } = {}) {
@@ -39,7 +59,11 @@ export function getKendrasForMedicine(medicineId, { lat, lng, inStockOnly = fals
     params.set("limit", limit);
   }
   const queryStr = params.toString() ? `?${params.toString()}` : "";
-  return fetch(`${API_URL}/medicines/${encodeURIComponent(medicineId)}/kendras${queryStr}`).then(handle);
+  return request(`/medicines/${encodeURIComponent(medicineId)}/kendras${queryStr}`);
+}
+
+export function getAllStores() {
+  return request("/stores");
 }
 
 export function getNearbyStores(lat, lng, limit = 10, medicineId = null) {
@@ -55,131 +79,167 @@ export function getNearbyStores(lat, lng, limit = 10, medicineId = null) {
     params.set("medicineId", medicineId);
   }
   const queryStr = params.toString() ? `?${params.toString()}` : "";
-  return fetch(`${API_URL}/stores/nearby${queryStr}`).then(handle);
+  return request(`/stores/nearby${queryStr}`);
 }
 
 export function getUhiStatus() {
-  return fetch(`${API_URL}/uhi/status`).then(handle);
+  return request("/uhi/status");
 }
 
 // -----------------------------------------------------------------------------
-// Auth & User Switcher
+// Authentication
 // -----------------------------------------------------------------------------
-export function getDemoUsers() {
-  return fetch(`${API_URL}/auth/demo-users`).then(handle);
-}
-
-export function loginUser(email) {
-  return fetch(`${API_URL}/auth/login`, {
+export function registerCustomer(data) {
+  return request("/auth/register/customer", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(data),
+  });
+}
+
+export function registerKendraOwner(data) {
+  return request("/auth/register/kendra", {
+    method: "POST",
+    body: JSON.stringify(data),
+  });
+}
+
+export function verifyEmail(token) {
+  return request("/auth/verify-email", {
+    method: "POST",
+    body: JSON.stringify({ token }),
+  });
+}
+
+export function resendVerification(email) {
+  return request("/auth/resend-verification", {
+    method: "POST",
     body: JSON.stringify({ email }),
-  }).then(handle);
+  });
 }
 
-export function registerUser(userData) {
-  return fetch(`${API_URL}/auth/register`, {
+export function loginUser(email, password) {
+  return request("/auth/login", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(userData),
-  }).then(handle);
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function adminLogin(email, password) {
+  return request("/auth/admin-login", {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  });
+}
+
+export function logoutUser() {
+  return request("/auth/logout", { method: "POST" });
+}
+
+export function fetchMe() {
+  return request("/auth/me");
 }
 
 // -----------------------------------------------------------------------------
 // Admin APIs
 // -----------------------------------------------------------------------------
 export function getAdminStats() {
-  return fetch(`${API_URL}/admin/stats`).then(handle);
+  return request("/admin/stats");
 }
 
 export function getAdminApplications(status = "all") {
-  return fetch(`${API_URL}/admin/applications?status=${encodeURIComponent(status)}`).then(handle);
+  return request(`/admin/applications?status=${encodeURIComponent(status)}`);
 }
 
 export function approveApplication(id) {
-  return fetch(`${API_URL}/admin/applications/${encodeURIComponent(id)}/approve`, {
+  return request(`/admin/applications/${encodeURIComponent(id)}/approve`, {
     method: "POST",
-  }).then(handle);
+  });
 }
 
 export function rejectApplication(id, reason = "") {
-  return fetch(`${API_URL}/admin/applications/${encodeURIComponent(id)}/reject`, {
+  return request(`/admin/applications/${encodeURIComponent(id)}/reject`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ reason }),
-  }).then(handle);
+  });
 }
 
 export function getAdminOrders() {
-  return fetch(`${API_URL}/admin/orders`).then(handle);
+  return request("/admin/orders");
+}
+
+export function getAdminUsers(role = "all") {
+  return request(`/admin/users?role=${encodeURIComponent(role)}`);
+}
+
+export function deleteAdminUser(id) {
+  return request(`/admin/users/${encodeURIComponent(id)}`, {
+    method: "DELETE",
+  });
 }
 
 // -----------------------------------------------------------------------------
 // Kendra Owner APIs
 // -----------------------------------------------------------------------------
-export function registerKendra(formData) {
-  return fetch(`${API_URL}/kendra/register`, {
+export function getKendraInventory(kendraCode) {
+  return request(`/kendra/inventory/${encodeURIComponent(kendraCode)}`);
+}
+
+export function updateKendraStock(kendraCode, medicineId, data) {
+  return request(
+    `/kendra/inventory/${encodeURIComponent(kendraCode)}/${encodeURIComponent(medicineId)}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(data),
+    }
+  );
+}
+
+export function addMedicineToKendra(kendraCode, medData) {
+  return request(`/kendra/inventory/${encodeURIComponent(kendraCode)}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(formData),
-  }).then(handle);
-}
-
-export function getKendraInventory(kendraId) {
-  return fetch(`${API_URL}/kendra/inventory/${encodeURIComponent(kendraId)}`).then(handle);
-}
-
-export function updateKendraStock(kendraId, medicineId, data) {
-  return fetch(`${API_URL}/kendra/inventory/${encodeURIComponent(kendraId)}/${encodeURIComponent(medicineId)}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(data),
-  }).then(handle);
-}
-
-export function addMedicineToKendra(kendraId, medData) {
-  return fetch(`${API_URL}/kendra/inventory/${encodeURIComponent(kendraId)}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(medData),
-  }).then(handle);
+  });
 }
 
-export function getKendraOrders(kendraId) {
-  return fetch(`${API_URL}/kendra/orders/${encodeURIComponent(kendraId)}`).then(handle);
+export function getKendraOrders(kendraCode) {
+  return request(`/kendra/orders/${encodeURIComponent(kendraCode)}`);
 }
 
 export function updateOrderStatus(orderId, status) {
-  return fetch(`${API_URL}/kendra/orders/${encodeURIComponent(orderId)}/status`, {
+  return request(`/kendra/orders/${encodeURIComponent(orderId)}/status`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ status }),
-  }).then(handle);
+  });
 }
 
 // -----------------------------------------------------------------------------
 // Customer APIs (Ordering & Out-of-Stock Notifications)
 // -----------------------------------------------------------------------------
-export function placeOrder(orderData) {
-  return fetch(`${API_URL}/orders`, {
+export function quoteOrder(quoteData) {
+  return request("/orders/quote", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(orderData),
-  }).then(handle);
+    body: JSON.stringify(quoteData),
+  });
 }
 
-export function getMyOrders(email) {
-  return fetch(`${API_URL}/orders/my?email=${encodeURIComponent(email)}`).then(handle);
+export function placeOrder(orderData) {
+  return request("/orders", {
+    method: "POST",
+    body: JSON.stringify(orderData),
+  });
+}
+
+export function getMyOrders() {
+  return request("/orders/my");
 }
 
 export function subscribeStockAlert(alertData) {
-  return fetch(`${API_URL}/stock-alerts`, {
+  return request("/stock-alerts", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(alertData),
-  }).then(handle);
+  });
 }
 
-export function getMyStockAlerts(email) {
-  return fetch(`${API_URL}/stock-alerts/my?email=${encodeURIComponent(email)}`).then(handle);
+export function getMyStockAlerts() {
+  return request("/stock-alerts/my");
 }

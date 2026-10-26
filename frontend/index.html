@@ -13,6 +13,8 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap"
     rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 </head>
 
 <body>
@@ -82,17 +84,17 @@
             <span id="tab-search-text">Find Medicines</span>
           </button>
 
-          <button type="button" class="nav__tab role-tab-customer" data-view="customer" id="tab-customer">
+          <button type="button" class="nav__tab role-tab-customer" data-view="customer" id="tab-customer" hidden>
             My Orders &amp; Alerts
             <span class="tab-badge" id="customer-orders-count" hidden>0</span>
           </button>
 
-          <button type="button" class="nav__tab role-tab-kendra" data-view="kendra" id="tab-kendra">
+          <button type="button" class="nav__tab role-tab-kendra" data-view="kendra" id="tab-kendra" hidden>
             Kendra Management Portal
             <span class="tab-badge tab-badge--amber" id="kendra-pending-badge" hidden>Pending</span>
           </button>
 
-          <button type="button" class="nav__tab role-tab-admin" data-view="admin" id="tab-admin">
+          <button type="button" class="nav__tab role-tab-admin" data-view="admin" id="tab-admin" hidden>
             Admin Approvals Portal
             <span class="tab-badge tab-badge--red" id="admin-pending-count" hidden>0</span>
           </button>
@@ -121,7 +123,7 @@
           </button>
 
           <!-- Customer Cart Button -->
-          <button type="button" class="btn-cart role-element-customer" id="btn-open-cart">
+          <button type="button" class="btn-cart role-element-customer" id="btn-open-cart" hidden>
             <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="2">
               <circle cx="9" cy="21" r="1" />
               <circle cx="20" cy="21" r="1" />
@@ -131,11 +133,20 @@
             <span class="cart-count-badge" id="cart-count-badge">0</span>
           </button>
 
-          <!-- Active User Persona Pill & Switcher -->
-          <div class="user-pill" id="user-pill">
+          <!-- Guest controls -->
+          <div class="auth-controls" id="auth-guest-controls">
+            <a href="/owner-login" data-route="/owner-login" class="auth-controls__owner" id="btn-header-owner-login">
+              Kendra Owner Login
+            </a>
+            <button type="button" class="auth-controls__signin" id="btn-header-login">Sign In</button>
+            <button type="button" class="btn-appointment auth-controls__register" id="btn-header-register">Register</button>
+          </div>
+
+          <!-- Signed-in account pill -->
+          <div class="user-pill" id="user-pill" hidden>
             <span class="user-pill__role-tag" id="user-role-tag">Customer</span>
-            <span class="user-pill__name" id="user-display-name">Ramesh Sharma</span>
-            <button type="button" class="user-pill__switch-btn" id="btn-open-persona">Switch Role</button>
+            <span class="user-pill__name" id="user-display-name">—</span>
+            <button type="button" class="user-pill__switch-btn" id="btn-logout">Sign out</button>
           </div>
 
           <!-- Highlight CTA Button (Matching 'Appointment' cyan button in reference) -->
@@ -528,60 +539,8 @@
           </div>
         </div>
 
-        <!-- Registration Form for New Kendra Owners -->
-        <div id="kendra-register-section" class="card card--padded" hidden>
-          <h3 class="card-title">Register Your Jan Aushadhi Kendra</h3>
-          <p class="card-subtitle">Join the nationwide PMBJP digital network to list live inventory, accept online prescriptions, and fulfill customer orders.</p>
-
-          <form id="kendra-register-form" class="grid-form">
-            <div class="form-group">
-              <label>Kendra Store Name *</label>
-              <input type="text" name="kendraName" required placeholder="e.g. Jan Aushadhi Kendra - Sector 14" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>Owner / Pharmacist Name *</label>
-              <input type="text" name="ownerName" required placeholder="Full Name" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>Email Address *</label>
-              <input type="email" name="email" required placeholder="kendra@domain.com" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>Phone / Counter Contact *</label>
-              <input type="tel" name="phone" required placeholder="+91 98765 43210" class="form-input" />
-            </div>
-            <div class="form-group full-width">
-              <label>Complete Street Address *</label>
-              <input type="text" name="address" required placeholder="Shop number, building, hospital campus, landmark" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>City *</label>
-              <input type="text" name="city" required placeholder="e.g. Bengaluru, Mumbai, Delhi" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>State *</label>
-              <input type="text" name="state" required placeholder="e.g. Karnataka, Maharashtra" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>Pincode *</label>
-              <input type="text" name="pincode" required placeholder="6-digit pincode" class="form-input" />
-            </div>
-            <div class="form-group">
-              <label>Drug License Number *</label>
-              <input type="text" name="licenseNumber" required placeholder="e.g. DL-PMBJP-2026-XXXXX" class="form-input" />
-            </div>
-            <div class="form-group full-width">
-              <label>Operating Hours</label>
-              <input type="text" name="operatingHours" placeholder="e.g. 08:30 AM - 09:30 PM (All 7 Days)" class="form-input" />
-            </div>
-            <div class="form-group full-width">
-              <button type="submit" class="btn btn--primary btn--large">Submit Kendra Application to Admin</button>
-            </div>
-          </form>
-        </div>
-
         <!-- Kendra Management Hub (if approved) -->
-        <div id="kendra-hub-section">
+        <div id="kendra-hub-section" hidden>
           <div class="kpi-grid">
             <div class="kpi-card">
               <span class="kpi-label">Formulations Stocked</span>
@@ -614,7 +573,7 @@
           <!-- Tab 1: Inventory Table -->
           <div id="subtab-kendra-inventory" class="subtab-panel is-active">
             <div class="inventory-bar">
-              <input type="text" id="kendra-inventory-search" placeholder="Filter inventory by name, composition, drug code…" class="form-input" />
+              <input type="text" id="kendra-inventory-search" placeholder="Filter by name, composition, category, drug code…" class="form-input" />
             </div>
             <div class="table-wrap">
               <table class="data-table">
@@ -623,7 +582,8 @@
                     <th>Drug Code</th>
                     <th>Generic Formulation</th>
                     <th>Pack Size</th>
-                    <th>Subsidized MRP</th>
+                    <th>Catalog MRP</th>
+                    <th>Your Price (₹)</th>
                     <th>Batch / Expiry</th>
                     <th>Stock Units</th>
                     <th>Status</th>
@@ -679,6 +639,14 @@
             <span class="kpi-label">Citizen Direct Savings Generated</span>
             <span class="kpi-value text-emerald" id="kpi-admin-savings">—</span>
           </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Registered Customers</span>
+            <span class="kpi-value text-navy" id="kpi-admin-customers">—</span>
+          </div>
+          <div class="kpi-card">
+            <span class="kpi-label">Kendra Owners (approved / pending)</span>
+            <span class="kpi-value text-emerald" id="kpi-admin-owners">—</span>
+          </div>
         </div>
 
         <!-- Admin Sub-tabs -->
@@ -688,6 +656,9 @@
           </button>
           <button type="button" class="subtab" data-subtab="admin-all-orders">
             System-wide Customer Orders Audit (<span id="count-admin-orders">0</span>)
+          </button>
+          <button type="button" class="subtab" data-subtab="admin-users">
+            User Directory — Customers &amp; Owners (<span id="count-admin-users">0</span>)
           </button>
         </div>
 
@@ -730,6 +701,393 @@
             </table>
           </div>
         </div>
+
+        <!-- Tab: Customers & Kendra Owners -->
+        <div id="subtab-admin-users" class="subtab-panel">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Name &amp; Email</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>Kendra</th>
+                  <th>Joined</th>
+                  <th>Admin Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-users-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 5: Sign In -->
+    <section id="view-login" class="view-panel auth-view">
+      <div class="auth-shell">
+        <div class="auth-card">
+          <p class="auth-eyebrow">Secure Account Access</p>
+          <h2 class="auth-title">Sign in to RxCompare</h2>
+          <p class="auth-subtitle">
+            Customers and Jan Aushadhi Kendra owners use the same secure sign-in form.
+            Choose your account type below — owners land directly in the Kendra Portal.
+          </p>
+
+          <div class="auth-tabs" role="tablist" aria-label="Sign-in account type" id="login-role-tabs">
+            <button type="button" class="auth-tab is-active" data-login-tab="customer" role="tab"
+              aria-selected="true">Customer</button>
+            <button type="button" class="auth-tab" data-login-tab="owner" role="tab"
+              aria-selected="false">Kendra Owner</button>
+          </div>
+          <p id="login-role-hint" class="auth-role-hint">
+            Customer sign-in: compare medicines, place orders and manage restock alerts.
+          </p>
+
+          <form id="login-form" class="auth-form" novalidate>
+            <div class="form-group">
+              <label for="login-email">Email address</label>
+              <input id="login-email" name="email" type="email" class="form-input"
+                autocomplete="email" placeholder="you@example.com" required />
+            </div>
+            <div class="form-group">
+              <label for="login-password">Password</label>
+              <input id="login-password" name="password" type="password" class="form-input"
+                autocomplete="current-password" placeholder="Your account password" required />
+            </div>
+
+            <p id="login-error" class="auth-error" hidden></p>
+            <p id="login-info" class="auth-info" hidden></p>
+
+            <button type="submit" class="btn btn--primary btn--large full-width" id="btn-login-submit">
+              Sign In
+            </button>
+          </form>
+
+          <div class="auth-links">
+            <span>New to RxCompare? <a href="/register" data-route="/register">Create an account</a></span>
+            <a href="/verify-email" data-route="/verify-email">Need to verify your email?</a>
+          </div>
+        </div>
+
+        <aside class="auth-aside">
+          <h3 class="auth-aside__title">Training &amp; demo accounts</h3>
+          <p class="auth-aside__text">
+            These seeded accounts exist in the local MongoDB database. Run
+            <span class="mono">npm run seed</span> before using them.
+          </p>
+          <div class="demo-cred">
+            <span class="demo-cred__role">Customer</span>
+            <span class="mono">ramesh.sharma@gmail.com</span>
+            <span class="mono demo-cred__password">Customer@123</span>
+          </div>
+          <div class="demo-cred">
+            <span class="demo-cred__role">Kendra Owner</span>
+            <span class="mono">parel.kendra@pmbjp.in</span>
+            <span class="mono demo-cred__password">Owner@123</span>
+          </div>
+          <div class="demo-cred">
+            <span class="demo-cred__role demo-cred__role--pending">Pending Kendra Owner</span>
+            <span class="mono">anita.kendra@pmbjp.in</span>
+            <span class="mono demo-cred__password">Owner@123</span>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- VIEW 6: Registration (Customer & Kendra Owner) -->
+    <section id="view-register" class="view-panel auth-view">
+      <div class="auth-shell auth-shell--wide">
+        <div class="auth-card auth-card--wide">
+          <p class="auth-eyebrow">Join the PMBJP Network</p>
+          <h2 class="auth-title">Create your RxCompare account</h2>
+          <p class="auth-subtitle">
+            Register as a customer to compare medicines and order online, or as a
+            medical shop owner to list your Jan Aushadhi Kendra.
+          </p>
+
+          <div class="auth-tabs" role="tablist" aria-label="Account type">
+            <button type="button" class="auth-tab is-active" data-register-tab="customer" role="tab"
+              aria-selected="true">Customer</button>
+            <button type="button" class="auth-tab" data-register-tab="owner" role="tab"
+              aria-selected="false">Medical Shop (Kendra) Owner</button>
+          </div>
+
+          <!-- Registration feedback -->
+          <div id="register-success" class="auth-success" hidden>
+            <div class="auth-success__icon">✓</div>
+            <h3 id="register-success-title">Registration submitted</h3>
+            <p id="register-success-message"></p>
+            <p class="auth-success__email">Verification email requested for
+              <strong id="register-success-email"></strong>
+            </p>
+            <a id="register-success-link" class="btn btn--primary" href="#" target="_blank"
+              rel="noopener noreferrer" hidden>Open verification link (development)</a>
+            <a class="btn btn--outline" href="/login" data-route="/login">Go to sign in</a>
+          </div>
+
+          <!-- Customer form -->
+          <form id="register-customer-form" class="auth-form" data-register-panel="customer" novalidate>
+            <div class="auth-grid">
+              <div class="form-group">
+                <label for="cust-name">Full name *</label>
+                <input id="cust-name" name="name" type="text" class="form-input"
+                  autocomplete="name" placeholder="Your full name" required />
+              </div>
+              <div class="form-group">
+                <label for="cust-email">Email address *</label>
+                <input id="cust-email" name="email" type="email" class="form-input"
+                  autocomplete="email" placeholder="you@example.com" required />
+              </div>
+              <div class="form-group">
+                <label for="cust-phone">Phone number</label>
+                <input id="cust-phone" name="phone" type="tel" class="form-input"
+                  autocomplete="tel" placeholder="+91 98765 43210" />
+              </div>
+              <div class="form-group">
+                <label for="cust-password">Password *</label>
+                <input id="cust-password" name="password" type="password" class="form-input"
+                  autocomplete="new-password" placeholder="Min 8 chars: A-Z, a-z, 0-9, symbol" minlength="8" required />
+              </div>
+              <div class="form-group">
+                <label for="cust-confirm">Confirm password *</label>
+                <input id="cust-confirm" name="confirmPassword" type="password" class="form-input"
+                  autocomplete="new-password" placeholder="Re-enter your password" minlength="8" required />
+              </div>
+              <div class="form-group full-width">
+                <p class="auth-fineprint" style="margin: 0;">
+                  Password must contain at least 8 characters, including one uppercase letter,
+                  one lowercase letter, one number and one special character.
+                </p>
+              </div>
+              <div class="form-group full-width">
+                <label for="cust-address">Delivery address</label>
+                <input id="cust-address" name="address" type="text" class="form-input"
+                  autocomplete="street-address" placeholder="House / street / area / city / pincode" />
+              </div>
+            </div>
+
+            <p id="customer-register-error" class="auth-error" hidden></p>
+            <button type="submit" class="btn btn--primary btn--large full-width" id="btn-register-customer">
+              Create Customer Account
+            </button>
+            <p class="auth-fineprint">
+              After registering you will receive a verification email. You must verify
+              your address before you can sign in.
+            </p>
+          </form>
+
+          <!-- Kendra owner form -->
+          <form id="register-owner-form" class="auth-form" data-register-panel="owner" novalidate hidden>
+            <div class="auth-grid">
+              <div class="form-group">
+                <label for="own-kendra-name">Kendra / shop name *</label>
+                <input id="own-kendra-name" name="kendraName" type="text" class="form-input"
+                  placeholder="e.g. Jan Aushadhi Kendra - Sector 14" required />
+              </div>
+              <div class="form-group">
+                <label for="own-owner-name">Owner / pharmacist name *</label>
+                <input id="own-owner-name" name="ownerName" type="text" class="form-input"
+                  autocomplete="name" placeholder="Full name" required />
+              </div>
+              <div class="form-group">
+                <label for="own-email">Email address *</label>
+                <input id="own-email" name="email" type="email" class="form-input"
+                  autocomplete="email" placeholder="kendra@example.com" required />
+              </div>
+              <div class="form-group">
+                <label for="own-phone">Counter phone *</label>
+                <input id="own-phone" name="phone" type="tel" class="form-input"
+                  autocomplete="tel" placeholder="+91 98765 43210" required />
+              </div>
+              <div class="form-group">
+                <label for="own-password">Password *</label>
+                <input id="own-password" name="password" type="password" class="form-input"
+                  autocomplete="new-password" placeholder="Min 8 chars: A-Z, a-z, 0-9, symbol" minlength="8" required />
+              </div>
+              <div class="form-group">
+                <label for="own-confirm">Confirm password *</label>
+                <input id="own-confirm" name="confirmPassword" type="password" class="form-input"
+                  autocomplete="new-password" placeholder="Re-enter your password" minlength="8" required />
+              </div>
+              <div class="form-group full-width">
+                <p class="auth-fineprint" style="margin: 0;">
+                  Password must contain at least 8 characters, including one uppercase letter,
+                  one lowercase letter, one number and one special character.
+                </p>
+              </div>
+              <div class="form-group full-width">
+                <label for="own-address">Shop address *</label>
+                <input id="own-address" name="address" type="text" class="form-input"
+                  autocomplete="street-address" placeholder="Shop number, building, hospital campus, landmark" required />
+              </div>
+              <div class="form-group">
+                <label for="own-city">City *</label>
+                <input id="own-city" name="city" type="text" class="form-input"
+                  placeholder="e.g. Mumbai" required />
+              </div>
+              <div class="form-group">
+                <label for="own-district">District</label>
+                <input id="own-district" name="district" type="text" class="form-input"
+                  placeholder="e.g. Mumbai Suburban" />
+              </div>
+              <div class="form-group">
+                <label for="own-state">State *</label>
+                <input id="own-state" name="state" type="text" class="form-input"
+                  placeholder="e.g. Maharashtra" required />
+              </div>
+              <div class="form-group">
+                <label for="own-pincode">Pincode</label>
+                <input id="own-pincode" name="pincode" type="text" class="form-input"
+                  placeholder="6-digit pincode" inputmode="numeric" maxlength="6" />
+              </div>
+              <div class="form-group">
+                <label for="own-license">Drug license number *</label>
+                <input id="own-license" name="licenseNumber" type="text" class="form-input"
+                  placeholder="e.g. MH-PMBJP-2026-12345" required />
+              </div>
+              <div class="form-group">
+                <label for="own-hours">Operating hours</label>
+                <input id="own-hours" name="operatingHours" type="text" class="form-input"
+                  placeholder="e.g. 08:30 AM - 09:30 PM (All 7 Days)" />
+              </div>
+            </div>
+
+            <div class="map-picker">
+              <div class="map-picker__header">
+                <div>
+                  <h3 class="map-picker__title">Pin your shop location *</h3>
+                  <p class="map-picker__subtitle">
+                    Search for the shop address or click the map to place the pin. The
+                    latitude and longitude are saved with your Kendra application.
+                  </p>
+                </div>
+              </div>
+
+              <div class="map-picker__toolbar">
+                <input id="owner-map-search" type="text" class="form-input"
+                  placeholder="Search shop address, locality, city or pincode…" />
+                <button type="button" class="btn btn--outline" id="btn-owner-map-search">Search map</button>
+                <button type="button" class="btn btn--outline" id="btn-owner-map-locate">Use my location</button>
+              </div>
+
+              <div id="owner-map" class="map-picker__canvas" role="application"
+                aria-label="Shop location map"></div>
+              <p id="owner-map-status" class="map-picker__status" role="status">
+                Click on the map to drop a pin at your shop.
+              </p>
+
+              <div class="map-picker__coords">
+                <div class="form-group">
+                  <label for="owner-lat">Latitude *</label>
+                  <input id="owner-lat" name="lat" type="number" step="any" min="-90" max="90"
+                    class="form-input mono" placeholder="e.g. 19.0176" required />
+                </div>
+                <div class="form-group">
+                  <label for="owner-lng">Longitude *</label>
+                  <input id="owner-lng" name="lng" type="number" step="any" min="-180" max="180"
+                    class="form-input mono" placeholder="e.g. 72.8562" required />
+                </div>
+              </div>
+            </div>
+
+            <p id="owner-register-error" class="auth-error" hidden></p>
+            <button type="submit" class="btn btn--primary btn--large full-width" id="btn-register-owner">
+              Submit Kendra Registration
+            </button>
+            <p class="auth-fineprint">
+              We email you a verification link first. After you verify your address, the
+              PMBJP administrator reviews your drug license and activates the shop.
+            </p>
+          </form>
+
+          <div class="auth-links">
+            <span>Already have an account? <a href="/login" data-route="/login">Sign in</a></span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 7: Email Verification -->
+    <section id="view-verify-email" class="view-panel auth-view">
+      <div class="auth-shell auth-shell--single">
+        <div class="auth-card auth-card--status">
+          <div class="auth-status-icon" id="verify-icon">✉️</div>
+          <h2 class="auth-title" id="verify-title">Verify your email</h2>
+          <p class="auth-subtitle" id="verify-message">
+            Checking your verification link…
+          </p>
+
+          <div id="verify-spinner" class="drawer__loading" hidden>
+            <div class="spinner"></div>
+            <p>Verifying your email address…</p>
+          </div>
+
+          <a id="verify-dev-link" class="btn btn--primary btn--large full-width" href="#"
+            target="_blank" rel="noopener noreferrer" hidden>Open verification link</a>
+
+          <div id="verify-resend-block" class="auth-resend" hidden>
+            <p class="auth-resend__text">
+              Need a new link? Enter the email address you registered with.
+            </p>
+            <form id="resend-verification-form" class="auth-form" novalidate>
+              <div class="form-group">
+                <label for="resend-email">Email address</label>
+                <input id="resend-email" name="email" type="email" class="form-input"
+                  autocomplete="email" placeholder="you@example.com" required />
+              </div>
+              <p id="resend-error" class="auth-error" hidden></p>
+              <p id="resend-info" class="auth-info" hidden></p>
+              <button type="submit" class="btn btn--outline btn--large full-width" id="btn-resend">
+                Send a new verification link
+              </button>
+            </form>
+          </div>
+
+          <div class="auth-links">
+            <a href="/login" data-route="/login">Back to sign in</a>
+            <a href="/register" data-route="/register">Create an account</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 8: Dedicated Administrator Sign-In (only reachable at /admin-login) -->
+    <section id="view-admin-login" class="view-panel auth-view auth-view--admin">
+      <div class="auth-shell auth-shell--single">
+        <div class="auth-card auth-card--admin">
+          <span class="auth-admin-badge">Restricted · PMBJP Administrator</span>
+          <h2 class="auth-title">Administrator Sign-In</h2>
+          <p class="auth-subtitle">
+            This is the dedicated administrator portal. Customer and Kendra owner
+            accounts cannot sign in here, and administrator credentials cannot be used
+            on the public sign-in page.
+          </p>
+
+          <form id="admin-login-form" class="auth-form" novalidate>
+            <div class="form-group">
+              <label for="admin-email">Administrator email</label>
+              <input id="admin-email" name="email" type="email" class="form-input"
+                autocomplete="username" placeholder="admin@rxcompare.gov.in" required />
+            </div>
+            <div class="form-group">
+              <label for="admin-password">Administrator password</label>
+              <input id="admin-password" name="password" type="password" class="form-input"
+                autocomplete="current-password" placeholder="Administrator password" required />
+            </div>
+
+            <p id="admin-login-error" class="auth-error" hidden></p>
+
+            <button type="submit" class="btn btn--primary btn--large full-width" id="btn-admin-login">
+              Sign In as Administrator
+            </button>
+          </form>
+
+          <p class="auth-footnote">
+            Unauthorized access attempts are recorded. If you are a customer or Kendra
+            owner, use the public <a href="/login" data-route="/login">sign-in page</a>.
+          </p>
+        </div>
       </div>
     </section>
 
@@ -752,10 +1110,11 @@
           <div class="footer__col">
             <h5 class="footer__col-title">Portal Links</h5>
             <ul class="footer__links">
-              <li><a href="#view-search" class="footer__link" data-view="search">Find Medicines</a></li>
-              <li><a href="#view-customer" class="footer__link" data-view="customer">My Account &amp; Orders</a></li>
-              <li><a href="#view-kendra" class="footer__link" data-view="kendra">Kendra Portal</a></li>
-              <li><a href="#view-admin" class="footer__link" data-view="admin">PMBJP Admin Oversight</a></li>
+              <li><a href="/" class="footer__link" data-route="/">Find Medicines</a></li>
+              <li><a href="/account" class="footer__link" data-view="customer">My Account &amp; Orders</a></li>
+              <li><a href="/kendra" class="footer__link" data-view="kendra">Kendra Portal</a></li>
+              <li><a href="/owner-login" class="footer__link" data-route="/owner-login">Kendra Owner Login</a></li>
+              <li><a href="/register" class="footer__link" data-route="/register">Create an Account</a></li>
             </ul>
           </div>
           <div class="footer__col">
@@ -844,8 +1203,18 @@
         </select>
       </div>
 
+      <div id="cart-price-note" class="cart-price-note">
+        Choose a Kendra to see live stock and the price for this cart.
+      </div>
+      <div id="cart-best-price-row" class="cart-best-price-row" hidden>
+        <span id="cart-best-price-text"></span>
+        <button type="button" id="btn-use-best-kendra" class="btn btn--outline btn--sm">
+          Switch to best-price Kendra
+        </button>
+      </div>
+
       <div class="cart-total-row">
-        <span class="cart-total-label">Total Generic MRP:</span>
+        <span class="cart-total-label">Total at selected Kendra:</span>
         <strong id="cart-total-price" class="cart-total-price">₹0.00</strong>
       </div>
       <div class="cart-savings-banner" id="cart-savings-text">
@@ -973,22 +1342,31 @@
   </div>
 
 
-  <!-- Persona Switcher Modal -->
-  <div id="persona-modal-backdrop" class="modal-backdrop" hidden></div>
-  <div id="persona-modal" class="modal modal--persona" hidden>
+  <!-- Admin Rejection Reason Modal -->
+  <div id="reject-application-backdrop" class="modal-backdrop" hidden></div>
+  <div id="reject-application-modal" class="modal" hidden>
     <div class="modal__header">
       <div>
-        <p class="modal__eyebrow">Multi-Role Testing Hub</p>
-        <h3 class="modal__title">Switch Active User Persona</h3>
+        <p class="modal__eyebrow">Application Review</p>
+        <h3 class="modal__title">Reject Kendra Application</h3>
       </div>
-      <button type="button" id="btn-close-persona-modal" class="modal__close" aria-label="Close">&times;</button>
+      <button type="button" id="btn-close-reject-application" class="modal__close" aria-label="Close">&times;</button>
     </div>
-    <div class="modal__body">
+    <form id="reject-application-form" class="modal__body">
+      <input type="hidden" id="reject-application-id" />
       <p class="modal__intro">
-        RxCompare provides tailored workflows for three primary stakeholders. Select an active persona to experience their authorized interface:
+        Decline the application for <strong id="reject-application-name">this Kendra</strong>.
+        The owner will see the reason below.
       </p>
-      <div id="persona-cards-container" class="persona-cards-container"></div>
-    </div>
+      <div class="form-group">
+        <label for="reject-application-reason">Reason for rejection *</label>
+        <textarea id="reject-application-reason" class="form-input" rows="3" required>Incomplete documentation</textarea>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <button type="button" id="btn-cancel-reject-application" class="btn btn--outline" style="flex: 1;">Cancel</button>
+        <button type="submit" id="btn-confirm-reject-application" class="btn btn--danger" style="flex: 2;">Confirm Rejection</button>
+      </div>
+    </form>
   </div>
 
   <!-- Add Medicine Modal (Kendra Owner) -->
@@ -1011,20 +1389,29 @@
         <input type="text" name="composition" required placeholder="e.g. Paracetamol 500mg" class="form-input" />
       </div>
       <div class="form-group">
-        <label>Therapeutic Category *</label>
-        <input type="text" name="category" required placeholder="e.g. Analgesic / Antipyretic" class="form-input" />
+        <label for="add-product-category">Therapeutic Category *</label>
+        <input id="add-product-category" type="text" name="category" list="add-product-category-options"
+          required placeholder="Choose a category or type a new one" class="form-input" />
+        <datalist id="add-product-category-options"></datalist>
+        <p class="auth-fineprint" style="margin: 6px 0 0;">
+          Pick an existing category or type a new name to create it in MongoDB.
+        </p>
       </div>
       <div class="form-group">
         <label>Pack / Unit Size *</label>
         <input type="text" name="packSize" required placeholder="e.g. 10 Tablets / Strip" class="form-input" />
       </div>
       <div class="form-group">
-        <label>Subsidized Generic MRP (INR) *</label>
-        <input type="number" step="0.01" name="genericMrp" required placeholder="e.g. 6.50" class="form-input" />
+        <label>Catalog Generic MRP (INR) *</label>
+        <input type="number" step="0.01" min="0.01" name="genericMrp" required placeholder="e.g. 6.50" class="form-input" />
+      </div>
+      <div class="form-group">
+        <label>Selling Price at Your Kendra (INR)</label>
+        <input type="number" step="0.01" min="0" name="price" placeholder="Leave blank to use the catalog MRP" class="form-input" />
       </div>
       <div class="form-group">
         <label>Initial Units in Stock *</label>
-        <input type="number" name="units" required placeholder="e.g. 100" class="form-input" />
+        <input type="number" name="units" min="0" required placeholder="e.g. 100" class="form-input" />
       </div>
       <div style="display: flex; gap: 10px; margin-top: 14px;">
         <button type="button" id="btn-cancel-product" class="btn btn--outline" style="flex: 1;">Cancel</button>
@@ -1040,23 +1427,6 @@
       <div>
         <span class="badge badge--amber">Out-of-Stock Restock Notification</span>
         <h3 class="modal__title">Get Notified When Restocked</h3>
-        <div class="persona-custom-section">
-          <h4>Quick Switch:</h4>
-          <div class="quick-persona-buttons">
-            <button type="button" class="btn-persona" data-role="customer" data-email="ramesh.sharma@gmail.com">
-              👤 Ramesh Sharma (Customer)
-            </button>
-            <button type="button" class="btn-persona" data-role="kendra_owner" data-email="parel.kendra@pmbjp.in">
-              🏥 Sunil Deshmukh (Approved Kendra Owner)
-            </button>
-            <button type="button" class="btn-persona" data-role="kendra_owner" data-email="anita.kendra@pmbjp.in">
-              ⏳ Anita Saxena (Pending Kendra Owner — Waiting for Admin Acceptance)
-            </button>
-            <button type="button" class="btn-persona" data-role="admin" data-email="admin@rxcompare.gov.in">
-              🛡️ Dr. Rajesh Varma (Admin)
-            </button>
-          </div>
-        </div>
       </div>
       <button type="button" id="btn-close-alert-modal" class="modal__close" aria-label="Close">&times;</button>
     </div>
@@ -1086,6 +1456,8 @@
     </form>
   </div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script type="module" src="/src/main.js"></script>
 </body>
 

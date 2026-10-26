@@ -3,20 +3,29 @@ import {
   searchMedicines,
   getAllMedicines,
   getKendrasForMedicine,
+  getAllStores,
   getUhiStatus,
-  getDemoUsers,
+  registerCustomer,
+  registerKendraOwner,
+  verifyEmail,
+  resendVerification,
   loginUser,
+  adminLogin,
+  logoutUser,
+  fetchMe,
   getAdminStats,
   getAdminApplications,
   approveApplication,
   rejectApplication,
   getAdminOrders,
-  registerKendra,
+  getAdminUsers,
+  deleteAdminUser,
   getKendraInventory,
   updateKendraStock,
   addMedicineToKendra,
   getKendraOrders,
   updateOrderStatus,
+  quoteOrder,
   placeOrder,
   getMyOrders,
   subscribeStockAlert,
@@ -26,26 +35,27 @@ import {
 // ---------------------------------------------------------------------
 // Application State
 // ---------------------------------------------------------------------
-let currentUser = {
-  id: "usr-customer-1",
-  name: "Ramesh Sharma",
-  email: "ramesh.sharma@gmail.com",
-  role: "customer",
-  phone: "+91 98765 43210",
-  address: "B-402, Green Glen Residences, Bellandur, Bengaluru, Karnataka - 560103",
-  status: "active",
-};
-
-let availablePersonaUsers = [];
+let currentUser = null;
+let authReady = false;
+let pendingRedirect = null;
 let cart = []; // [{ medicineId, genericName, genericMrp, packSize, quantity, cheapestBrandedMrp }]
 let activeView = "search";
 let lastSearchResults = [];
 let allMedicinesCache = [];
+let allStoresCache = [];
 let activeCategory = "all";
 let currentDrawerMedicine = null;
 let currentKendraInventory = [];
+let currentKendraCategories = [];
+let currentCartQuote = null;
+let cartQuoteRequestId = 0;
+let rejectApplicationTarget = null;
+let loginRole = "customer";
 let userCoords = null;
 let checkoutOrderData = null;
+let ownerMap = null;
+let ownerMarker = null;
+let ownerMapInitialized = false;
 
 // ---------------------------------------------------------------------
 // SVG Icons
@@ -87,7 +97,11 @@ function showToast(message, iconSymbol = "✓") {
 // ---------------------------------------------------------------------
 const userDisplayRole = document.getElementById("user-role-tag");
 const userDisplayName = document.getElementById("user-display-name");
-const btnOpenPersona = document.getElementById("btn-open-persona");
+const userPill = document.getElementById("user-pill");
+const authGuestControls = document.getElementById("auth-guest-controls");
+const btnHeaderLogin = document.getElementById("btn-header-login");
+const btnHeaderRegister = document.getElementById("btn-header-register");
+const btnLogout = document.getElementById("btn-logout");
 const btnOpenCart = document.getElementById("btn-open-cart");
 const cartCountBadge = document.getElementById("cart-count-badge");
 const tabSearchText = document.getElementById("tab-search-text");
@@ -141,6 +155,10 @@ const cartFooter = document.getElementById("cart-footer");
 const cartTotalPrice = document.getElementById("cart-total-price");
 const cartSavingsText = document.getElementById("cart-savings-text");
 const cartKendraSelect = document.getElementById("cart-kendra-select");
+const cartPriceNote = document.getElementById("cart-price-note");
+const cartBestPriceRow = document.getElementById("cart-best-price-row");
+const cartBestPriceText = document.getElementById("cart-best-price-text");
+const btnUseBestKendra = document.getElementById("btn-use-best-kendra");
 const btnProceedPayment = document.getElementById("btn-proceed-payment");
 
 const paymentModalBackdrop = document.getElementById("payment-modal-backdrop");
@@ -165,7 +183,6 @@ const btnClosePaymentReceipt = document.getElementById("btn-close-payment-receip
 
 const alertModalBackdrop = document.getElementById("alert-modal-backdrop");
 const addProductModalBackdrop = document.getElementById("add-product-modal-backdrop");
-const personaModalBackdrop = document.getElementById("persona-modal-backdrop");
 
 // Store Drawer
 const drawer = document.getElementById("drawer");
@@ -198,7 +215,6 @@ const searchCategoryTrigger = document.getElementById("search-category-trigger")
 const searchCategoryLabel = document.getElementById("search-category-label");
 const searchCategoryOptions = document.getElementById("search-category-options");
 const btnHeroCompare = document.getElementById("btn-hero-compare");
-const btnHeroFind = document.getElementById("btn-hero-find");
 const btnHeaderLocate = document.getElementById("btn-header-locate");
 const categoriesRow = document.getElementById("categories-row");
 const catPrevBtn = document.getElementById("cat-prev-btn");
@@ -216,9 +232,7 @@ const btnRefreshCustomer = document.getElementById("btn-refresh-customer");
 const kendraDashTitle = document.getElementById("kendra-dash-title");
 const kendraPendingBanner = document.getElementById("kendra-pending-banner");
 const pendingKendraName = document.getElementById("pending-kendra-name");
-const kendraRegisterSection = document.getElementById("kendra-register-section");
 const kendraHubSection = document.getElementById("kendra-hub-section");
-const kendraRegisterForm = document.getElementById("kendra-register-form");
 const kpiKendraTotalItems = document.getElementById("kpi-kendra-total-items");
 const kpiKendraInStock = document.getElementById("kpi-kendra-in-stock");
 const kpiKendraOutStock = document.getElementById("kpi-kendra-out-stock");
@@ -234,10 +248,14 @@ const kpiAdminKendras = document.getElementById("kpi-admin-kendras");
 const kpiAdminPending = document.getElementById("kpi-admin-pending");
 const kpiAdminOrders = document.getElementById("kpi-admin-orders");
 const kpiAdminSavings = document.getElementById("kpi-admin-savings");
+const kpiAdminCustomers = document.getElementById("kpi-admin-customers");
+const kpiAdminOwners = document.getElementById("kpi-admin-owners");
 const adminApprovalsTbody = document.getElementById("admin-approvals-tbody");
 const adminOrdersTbody = document.getElementById("admin-orders-tbody");
+const adminUsersTbody = document.getElementById("admin-users-tbody");
 const countAdminPending = document.getElementById("count-admin-pending");
 const countAdminOrders = document.getElementById("count-admin-orders");
+const countAdminUsers = document.getElementById("count-admin-users");
 const adminPendingCountBadge = document.getElementById("admin-pending-count");
 const btnRefreshAdmin = document.getElementById("btn-refresh-admin");
 
@@ -253,150 +271,244 @@ const alertCustomerPhone = document.getElementById("alert-customer-phone");
 
 // Add Product Modal
 const addProductForm = document.getElementById("add-product-form");
+const addProductCategory = document.getElementById("add-product-category");
+const addProductCategoryOptions = document.getElementById("add-product-category-options");
+
+// Admin rejection reason modal
+const rejectApplicationForm = document.getElementById("reject-application-form");
+const rejectApplicationId = document.getElementById("reject-application-id");
+const rejectApplicationName = document.getElementById("reject-application-name");
+const rejectApplicationReason = document.getElementById("reject-application-reason");
+const rejectApplicationBackdrop = document.getElementById("reject-application-backdrop");
+const rejectApplicationModal = document.getElementById("reject-application-modal");
 
 // ---------------------------------------------------------------------
-// Role-Based Isolation & Persona Switching
+// Authentication UI, Role Guards & History Router
 // ---------------------------------------------------------------------
-function updateRoleUI() {
-  document.body.dataset.role = currentUser.role;
-  userDisplayName.textContent = currentUser.name;
+const loginForm = document.getElementById("login-form");
+const loginEmail = document.getElementById("login-email");
+const loginPassword = document.getElementById("login-password");
+const loginError = document.getElementById("login-error");
+const loginInfo = document.getElementById("login-info");
+const btnLoginSubmit = document.getElementById("btn-login-submit");
+const loginRoleHint = document.getElementById("login-role-hint");
+const loginRoleTabs = document.querySelectorAll("[data-login-tab]");
 
-  if (currentUser.role === "admin") {
-    userDisplayRole.textContent = "Admin";
-    userDisplayRole.style.background = "#fae4df";
-    userDisplayRole.style.color = "#a42c16";
-    tabSearchText.textContent = "Medicine Catalog";
+const adminLoginForm = document.getElementById("admin-login-form");
+const adminEmailInput = document.getElementById("admin-email");
+const adminPasswordInput = document.getElementById("admin-password");
+const adminLoginError = document.getElementById("admin-login-error");
+const btnAdminLogin = document.getElementById("btn-admin-login");
 
-    // Admin login: keep BOTH Kendra Management Portal and Admin Portal
-    if (tabCustomer) tabCustomer.style.display = "";
-    if (tabKendra) tabKendra.style.display = "";
-    if (tabAdmin) tabAdmin.style.display = "";
-    if (btnOpenCart) btnOpenCart.style.display = "";
-  } else if (currentUser.role === "kendra_owner") {
-    userDisplayRole.textContent = "Kendra Owner";
-    userDisplayRole.style.background = "#e6f6ee";
-    userDisplayRole.style.color = "#167a52";
-    tabSearchText.textContent = "Medicine Catalog";
+const registerCustomerForm = document.getElementById("register-customer-form");
+const registerOwnerForm = document.getElementById("register-owner-form");
+const customerRegisterError = document.getElementById("customer-register-error");
+const ownerRegisterError = document.getElementById("owner-register-error");
+const registerTabs = document.querySelectorAll("[data-register-tab]");
+const registerSuccess = document.getElementById("register-success");
+const registerSuccessTitle = document.getElementById("register-success-title");
+const registerSuccessMessage = document.getElementById("register-success-message");
+const registerSuccessEmail = document.getElementById("register-success-email");
+const registerSuccessLink = document.getElementById("register-success-link");
+const registerAuthTabs = document.querySelector("#view-register .auth-tabs");
+const btnRegisterCustomer = document.getElementById("btn-register-customer");
+const btnRegisterOwner = document.getElementById("btn-register-owner");
 
-    // Kendra Owner login: keep ONLY Kendra Management Portal (remove Admin Portal)
-    if (tabCustomer) tabCustomer.style.display = "none";
-    if (tabKendra) tabKendra.style.display = "";
-    if (tabAdmin) tabAdmin.style.display = "none";
-    if (btnOpenCart) btnOpenCart.style.display = "none";
+const verifyIcon = document.getElementById("verify-icon");
+const verifyTitle = document.getElementById("verify-title");
+const verifyMessage = document.getElementById("verify-message");
+const verifySpinner = document.getElementById("verify-spinner");
+const verifyDevLink = document.getElementById("verify-dev-link");
+const verifyResendBlock = document.getElementById("verify-resend-block");
+const resendForm = document.getElementById("resend-verification-form");
+const resendEmail = document.getElementById("resend-email");
+const resendError = document.getElementById("resend-error");
+const resendInfo = document.getElementById("resend-info");
+const btnResend = document.getElementById("btn-resend");
 
-    // Guard: redirect away from unauthorized view
-    if (activeView === "admin" || activeView === "customer") {
-      switchView("kendra");
-    }
-  } else {
-    userDisplayRole.textContent = "Customer";
-    userDisplayRole.style.background = "#eaf1fb";
-    userDisplayRole.style.color = "#1c529e";
-    tabSearchText.textContent = "Find Medicines";
+const ownerMapSearch = document.getElementById("owner-map-search");
+const btnOwnerMapSearch = document.getElementById("btn-owner-map-search");
+const btnOwnerMapLocate = document.getElementById("btn-owner-map-locate");
+const ownerMapStatus = document.getElementById("owner-map-status");
+const ownerLatInput = document.getElementById("owner-lat");
+const ownerLngInput = document.getElementById("owner-lng");
+const ownerCityInput = document.getElementById("own-city");
+const ownerDistrictInput = document.getElementById("own-district");
+const ownerStateInput = document.getElementById("own-state");
+const ownerPincodeInput = document.getElementById("own-pincode");
+const ownerAddressInput = document.getElementById("own-address");
 
-    // Customer login: remove BOTH Kendra Management Portal and Admin Portal
-    if (tabCustomer) tabCustomer.style.display = "";
-    if (tabKendra) tabKendra.style.display = "none";
-    if (tabAdmin) tabAdmin.style.display = "none";
-    if (btnOpenCart) btnOpenCart.style.display = "";
+let lastUnverifiedEmail = "";
 
-    // Guard: redirect away from unauthorized view
-    if (activeView === "kendra" || activeView === "admin") {
-      switchView("search");
-    }
-  }
-
-  // Pre-fill fields
-  if (alertCustomerName) alertCustomerName.value = currentUser.name;
-  if (alertCustomerEmail) alertCustomerEmail.value = currentUser.email;
-  if (alertCustomerPhone) alertCustomerPhone.value = currentUser.phone || "";
-  if (payDeliveryAddress) payDeliveryAddress.value = currentUser.address || "";
-}
-
-const DEMO_PERSONAS = {
-  customer: {
-    id: "usr-customer-1",
-    name: "Ramesh Sharma",
-    email: "ramesh.sharma@gmail.com",
-    role: "customer",
-    phone: "+91 98765 43210",
-    address: "B-402, Green Glen Residences, Bellandur, Bengaluru, Karnataka - 560103",
-    status: "active",
-  },
-  kendra: {
-    id: "usr-kendra-1",
-    name: "Sunil Deshmukh",
-    email: "parel.kendra@pmbjp.in",
-    role: "kendra_owner",
-    kendraId: "PMBJK02001",
-    kendraName: "Jan Aushadhi Kendra - KEM Hospital Parel",
-    phone: "+91 98201 44552",
-    status: "approved",
-  },
-  pendingKendra: {
-    id: "usr-kendra-2",
-    name: "Anita Saxena",
-    email: "anita.kendra@pmbjp.in",
-    role: "kendra_owner",
-    kendraId: "PMBJK-APP-99",
-    kendraName: "Jan Aushadhi Kendra - Rohini Sector 7",
-    phone: "+91 98112 33445",
-    status: "pending",
-  },
-  admin: {
-    id: "usr-admin-1",
-    name: "Dr. Rajesh Varma",
-    email: "admin@rxcompare.gov.in",
-    role: "admin",
-    designation: "Chief PMBJP Network Administrator",
-    phone: "+91 11 2338 5642",
-    status: "active",
-  },
+const ROLE_LABELS = {
+  customer: "Customer",
+  kendra_owner: "Kendra Owner",
+  admin: "Administrator",
 };
 
-const LOCAL_DEMO_USERS = [
-  DEMO_PERSONAS.admin,
-  DEMO_PERSONAS.kendra,
-  DEMO_PERSONAS.pendingKendra,
-  DEMO_PERSONAS.customer,
-];
+const ROUTE_PATHS = {
+  search: "/",
+  customer: "/account",
+  kendra: "/kendra",
+  admin: "/admin",
+  login: "/login",
+  register: "/register",
+  "verify-email": "/verify-email",
+  "admin-login": "/admin-login",
+};
 
-function switchUser(user) {
-  currentUser = user;
-  localStorage.setItem("rxcompare_user", JSON.stringify(user));
-  updateRoleUI();
-  personaModalBackdrop.hidden = true;
-  const pm = document.getElementById("persona-modal");
-  if (pm) pm.hidden = true;
+const PATH_VIEWS = Object.fromEntries(
+  Object.entries(ROUTE_PATHS).map(([view, path]) => [path, view])
+);
 
-  if (currentUser.role === "admin") {
-    showToast("Logged in as Admin: Both Kendra & Admin portals unlocked", "🛡️");
-    switchView("admin");
-  } else if (currentUser.role === "kendra_owner") {
-    showToast("Logged in as Kendra Owner: Kendra Management Portal unlocked", "🏥");
-    switchView("kendra");
-  } else {
-    showToast("Logged in as Customer: Find Medicines & Orders portal active", "👤");
-    switchView("search");
-  }
+function setHidden(element, hidden) {
+  if (element) element.hidden = Boolean(hidden);
 }
 
-function switchView(viewName) {
-  // Enforce role-based access control
-  if (currentUser.role === "customer" && (viewName === "kendra" || viewName === "admin")) {
-    showToast("Kendra & Admin portals are restricted to authorized personnel. Use 'Switch Role' to login.", "🔒");
+function setFormMessage(element, message) {
+  if (!element) return;
+  element.textContent = message || "";
+  element.hidden = !message;
+}
+
+const PASSWORD_POLICY = [
+  { pattern: /[A-Z]/, label: "one uppercase letter" },
+  { pattern: /[a-z]/, label: "one lowercase letter" },
+  { pattern: /[0-9]/, label: "one number" },
+  { pattern: /[^A-Za-z0-9\s]/, label: "one special character" },
+];
+
+function passwordPolicyError(password) {
+  if (typeof password !== "string" || password.length < 8) {
+    return "Password must be at least 8 characters long.";
+  }
+  const missing = PASSWORD_POLICY.filter((rule) => !rule.pattern.test(password)).map(
+    (rule) => rule.label
+  );
+  if (missing.length > 0) {
+    return `Password must contain at least ${missing.join(", ")}.`;
+  }
+  return "";
+}
+
+function routeForView(viewName) {
+  return ROUTE_PATHS[viewName] || "/";
+}
+
+function viewForPath(pathname) {
+  const normalized = (pathname || "/").replace(/\/+$/, "") || "/";
+  if (normalized === "/owner-login") return "login";
+  return PATH_VIEWS[normalized] || "search";
+}
+
+/**
+ * The public sign-in page hosts both account types. The Kendra Owner tab is a
+ * visible entry point (header link, footer link and /owner-login URL) so owners
+ * do not have to guess that the customer form also works for them.
+ */
+function setLoginRole(role) {
+  loginRole = role === "owner" ? "owner" : "customer";
+  const isOwner = loginRole === "owner";
+
+  loginRoleTabs.forEach((tab) => {
+    const active = tab.dataset.loginTab === loginRole;
+    tab.classList.toggle("is-active", active);
+    tab.setAttribute("aria-selected", String(active));
+  });
+
+  if (loginRoleHint) {
+    loginRoleHint.textContent = isOwner
+      ? "Kendra Owner sign-in: manage inventory, prices and incoming orders in the Kendra Portal."
+      : "Customer sign-in: compare medicines, place orders and manage restock alerts.";
+  }
+  if (btnLoginSubmit) {
+    btnLoginSubmit.textContent = isOwner ? "Sign In to Kendra Portal" : "Sign In";
+  }
+  if (loginEmail) {
+    loginEmail.placeholder = isOwner ? "owner@example.com" : "you@example.com";
+  }
+  if (loginPassword) {
+    loginPassword.placeholder = isOwner
+      ? "Your Kendra owner password"
+      : "Your account password";
+  }
+  if (loginForm) {
+    loginForm.dataset.loginRole = loginRole;
+  }
+  setFormMessage(loginError, "");
+  setFormMessage(loginInfo, "");
+}
+
+function updateRoleUI() {
+  const role = currentUser ? currentUser.role : "guest";
+  document.body.dataset.role = role;
+
+  setHidden(authGuestControls, Boolean(currentUser));
+  setHidden(userPill, !currentUser);
+  setHidden(tabCustomer, !currentUser || role !== "customer");
+  setHidden(tabKendra, role !== "kendra_owner");
+  setHidden(tabAdmin, role !== "admin");
+  setHidden(btnOpenCart, !currentUser || role !== "customer");
+
+  if (currentUser) {
+    userDisplayName.textContent = currentUser.name || "Account";
+    userDisplayRole.textContent = ROLE_LABELS[role] || role;
+    userDisplayRole.style.background =
+      role === "admin" ? "#fae4df" : role === "kendra_owner" ? "#e6f6ee" : "#eaf1fb";
+    userDisplayRole.style.color =
+      role === "admin" ? "#a42c16" : role === "kendra_owner" ? "#167a52" : "#1c529e";
+    tabSearchText.textContent = role === "customer" ? "Find Medicines" : "Medicine Catalog";
+  } else {
+    userDisplayName.textContent = "—";
+    userDisplayRole.textContent = "Guest";
+    tabSearchText.textContent = "Find Medicines";
+  }
+
+  if (alertCustomerName) alertCustomerName.value = currentUser?.name || "";
+  if (alertCustomerEmail) alertCustomerEmail.value = currentUser?.email || "";
+  if (alertCustomerPhone) alertCustomerPhone.value = currentUser?.phone || "";
+  if (payDeliveryAddress) payDeliveryAddress.value = currentUser?.address || "";
+}
+
+function canAccessView(viewName) {
+  if (["search", "login", "register", "verify-email", "admin-login"].includes(viewName)) {
+    return true;
+  }
+  if (!currentUser) return false;
+  if (viewName === "admin") return currentUser.role === "admin";
+  if (viewName === "kendra") return currentUser.role === "kendra_owner";
+  if (viewName === "customer") return currentUser.role === "customer";
+  return false;
+}
+
+function redirectAfterAuth(user) {
+  const fallback =
+    user.role === "admin" ? "/admin" : user.role === "kendra_owner" ? "/kendra" : "/account";
+  const requested = pendingRedirect;
+  pendingRedirect = null;
+
+  if (requested && canAccessView(viewForPath(requested))) {
+    navigate(requested, { replace: true });
     return;
   }
-  if (currentUser.role === "kendra_owner" && viewName === "admin") {
-    showToast("Admin Approvals Portal requires Administrator credentials.", "🔒");
-    return;
-  }
-  if (currentUser.role === "kendra_owner" && viewName === "customer") {
-    showToast("My Orders & Alerts portal is for customer logins.", "ℹ️");
+  navigate(fallback, { replace: true });
+}
+
+async function enterSession(user, message) {
+  currentUser = user;
+  updateRoleUI();
+  if (message) showToast(message, user.role === "admin" ? "🛡️" : "✓");
+  redirectAfterAuth(user);
+}
+
+function switchView(viewName, { updateUrl = false } = {}) {
+  if (!canAccessView(viewName)) {
+    renderRoute();
     return;
   }
 
   activeView = viewName;
+
   navTabs.forEach((tab) => {
     tab.classList.toggle("is-active", tab.dataset.view === viewName);
   });
@@ -406,14 +518,652 @@ function switchView(viewName) {
 
   window.scrollTo({ top: 0, behavior: "smooth" });
 
+  if (viewName === "register") {
+    if (registerSuccess && !registerSuccess.hidden) resetRegisterFeedback();
+    syncRegisterTab("customer", { reset: false });
+  }
+  if (viewName === "verify-email") handleVerifyRoute();
   if (viewName === "customer") loadCustomerDashboard();
   if (viewName === "kendra") loadKendraDashboard();
   if (viewName === "admin") loadAdminDashboard();
+  if (viewName === "login") loginEmail?.focus();
+  if (viewName === "admin-login") adminEmailInput?.focus();
+
+  if (updateUrl) navigate(routeForView(viewName));
+}
+
+function navigate(path, { replace = false } = {}) {
+  const target = path || "/";
+  if (replace) {
+    window.history.replaceState({}, "", target);
+  } else if (window.location.pathname !== target) {
+    window.history.pushState({}, "", target);
+  }
+  renderRoute();
+}
+
+function renderRoute() {
+  const path = window.location.pathname || "/";
+  const viewName = viewForPath(path);
+
+  if (!canAccessView(viewName)) {
+    if (!currentUser) {
+      pendingRedirect = path;
+      showToast("Please sign in to continue.", "🔒");
+      if (viewForPath(path) !== "login") {
+        const intendedView = viewForPath(path);
+        navigate("/login", { replace: true });
+        if (intendedView === "kendra") setLoginRole("owner");
+      } else {
+        switchView("login");
+      }
+    } else {
+      showToast("You do not have permission to open that portal.", "🔒");
+      navigate("/", { replace: true });
+    }
+    return;
+  }
+
+  switchView(viewName);
+
+  if (viewName === "login") {
+    const normalized = path.replace(/\/+$/, "") || "/";
+    setLoginRole(normalized === "/owner-login" ? "owner" : "customer");
+    loginEmail?.focus();
+  }
 }
 
 navTabs.forEach((tab) => {
-  tab.addEventListener("click", () => switchView(tab.dataset.view));
+  tab.addEventListener("click", () => navigate(routeForView(tab.dataset.view)));
 });
+
+btnHeaderLogin?.addEventListener("click", () => navigate("/login"));
+btnHeaderRegister?.addEventListener("click", () => navigate("/register"));
+loginRoleTabs.forEach((tab) => {
+  tab.addEventListener("click", () => setLoginRole(tab.dataset.loginTab));
+});
+btnLogout?.addEventListener("click", handleLogout);
+
+window.addEventListener("popstate", renderRoute);
+
+// ---------------------------------------------------------------------
+// Sign In / Sign Out
+// ---------------------------------------------------------------------
+async function handleLogout() {
+  try {
+    await logoutUser();
+  } catch {
+    // The cookie is cleared server-side; ignore network errors on sign-out.
+  }
+  currentUser = null;
+  pendingRedirect = null;
+  updateRoleUI();
+  navigate("/");
+  showToast("You have been signed out.", "👋");
+}
+
+loginForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setFormMessage(loginError, "");
+  setFormMessage(loginInfo, "");
+
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value;
+
+  if (!email || !password) {
+    setFormMessage(loginError, "Enter your email address and password.");
+    return;
+  }
+
+  btnLoginSubmit.disabled = true;
+  btnLoginSubmit.textContent = "Signing in…";
+
+  try {
+    const res = await loginUser(email, password);
+    loginForm.reset();
+    const firstName = (res.user.name || "").split(" ")[0];
+    await enterSession(res.user, `Welcome back, ${firstName || "there"}!`);
+  } catch (err) {
+    if (err.code === "ADMIN_URL_REQUIRED") {
+      setFormMessage(
+        loginError,
+        "Administrator accounts cannot sign in here. Use the dedicated administrator sign-in URL."
+      );
+    } else if (err.code === "EMAIL_NOT_VERIFIED") {
+      lastUnverifiedEmail = email;
+      setFormMessage(
+        loginInfo,
+        "Your email address is not verified yet. Opening the verification page so you can request a new link."
+      );
+      setTimeout(() => navigate("/verify-email"), 900);
+    } else if (err.code === "KENDRA_REJECTED") {
+      setFormMessage(
+        loginError,
+        "Your Kendra application was not approved. Please contact the PMBJP administrator."
+      );
+    } else {
+      setFormMessage(loginError, err.message || "Sign-in failed. Please try again.");
+    }
+  } finally {
+    btnLoginSubmit.disabled = false;
+    btnLoginSubmit.textContent = loginRole === "owner" ? "Sign In to Kendra Portal" : "Sign In";
+  }
+});
+
+adminLoginForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setFormMessage(adminLoginError, "");
+
+  const email = adminEmailInput.value.trim();
+  const password = adminPasswordInput.value;
+
+  if (!email || !password) {
+    setFormMessage(adminLoginError, "Enter the administrator email and password.");
+    return;
+  }
+
+  btnAdminLogin.disabled = true;
+  btnAdminLogin.textContent = "Authenticating…";
+
+  try {
+    const res = await adminLogin(email, password);
+    adminLoginForm.reset();
+    await enterSession(res.user, "Administrator signed in.");
+  } catch (err) {
+    setFormMessage(
+      adminLoginError,
+      err.message || "Invalid administrator credentials."
+    );
+  } finally {
+    btnAdminLogin.disabled = false;
+    btnAdminLogin.textContent = "Sign In as Administrator";
+  }
+});
+
+// ---------------------------------------------------------------------
+// Registration
+// ---------------------------------------------------------------------
+function syncRegisterTab(tabName, { reset = true } = {}) {
+  registerTabs.forEach((tab) => {
+    const isActive = tab.dataset.registerTab === tabName;
+    tab.classList.toggle("is-active", isActive);
+    tab.setAttribute("aria-selected", String(isActive));
+  });
+
+  if (registerCustomerForm) registerCustomerForm.hidden = tabName !== "customer";
+  if (registerOwnerForm) registerOwnerForm.hidden = tabName !== "owner";
+
+  if (reset) {
+    setFormMessage(customerRegisterError, "");
+    setFormMessage(ownerRegisterError, "");
+  }
+
+  if (tabName === "owner") {
+    requestAnimationFrame(() => initOwnerMap());
+  }
+}
+
+registerTabs.forEach((tab) => {
+  tab.addEventListener("click", () => {
+    setHidden(registerSuccess, true);
+    setHidden(registerAuthTabs, false);
+    registerCustomerForm?.classList.remove("is-hidden");
+    registerOwnerForm?.classList.remove("is-hidden");
+    syncRegisterTab(tab.dataset.registerTab);
+  });
+});
+
+function resetRegisterFeedback() {
+  setHidden(registerSuccess, true);
+  setHidden(registerAuthTabs, false);
+  setFormMessage(customerRegisterError, "");
+  setFormMessage(ownerRegisterError, "");
+}
+
+function showRegisterSuccess({ title, message, email, link }) {
+  if (registerCustomerForm) registerCustomerForm.hidden = true;
+  if (registerOwnerForm) registerOwnerForm.hidden = true;
+  setHidden(registerAuthTabs, true);
+  setHidden(registerSuccess, false);
+
+  registerSuccessTitle.textContent = title;
+  registerSuccessMessage.textContent = message;
+  registerSuccessEmail.textContent = email || "";
+
+  if (link) {
+    registerSuccessLink.href = link;
+    setHidden(registerSuccessLink, false);
+  } else {
+    setHidden(registerSuccessLink, true);
+  }
+}
+
+registerCustomerForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setFormMessage(customerRegisterError, "");
+
+  const formData = new FormData(registerCustomerForm);
+  const name = String(formData.get("name") || "").trim();
+  const email = String(formData.get("email") || "").trim().toLowerCase();
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+  const phone = String(formData.get("phone") || "").trim();
+  const address = String(formData.get("address") || "").trim();
+
+  if (!name) return setFormMessage(customerRegisterError, "Enter your full name.");
+  if (!email) return setFormMessage(customerRegisterError, "Enter your email address.");
+  const customerPasswordError = passwordPolicyError(password);
+  if (customerPasswordError) {
+    return setFormMessage(customerRegisterError, customerPasswordError);
+  }
+  if (password !== confirmPassword) {
+    return setFormMessage(customerRegisterError, "The two passwords do not match.");
+  }
+
+  btnRegisterCustomer.disabled = true;
+  btnRegisterCustomer.textContent = "Creating account…";
+
+  try {
+    const res = await registerCustomer({ name, email, password, phone, address });
+    lastUnverifiedEmail = email;
+    registerCustomerForm.reset();
+    showRegisterSuccess({
+      title: "Customer account created",
+      message:
+        res.message ||
+        "Check your inbox and click the verification link before signing in.",
+      email,
+      link: res.devVerificationUrl || null,
+    });
+    showToast("Registration saved. Please verify your email.", "✉️");
+  } catch (err) {
+    const detail =
+      Array.isArray(err.details) && err.details.length
+        ? `${err.message}: ${err.details.join("; ")}`
+        : err.message;
+    setFormMessage(customerRegisterError, detail || "Registration failed.");
+    if (err.code === "EMAIL_EXISTS_UNVERIFIED" && err.devVerificationUrl) {
+      lastUnverifiedEmail = email;
+    }
+  } finally {
+    btnRegisterCustomer.disabled = false;
+    btnRegisterCustomer.textContent = "Create Customer Account";
+  }
+});
+
+registerOwnerForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setFormMessage(ownerRegisterError, "");
+
+  const formData = new FormData(registerOwnerForm);
+  const password = String(formData.get("password") || "");
+  const confirmPassword = String(formData.get("confirmPassword") || "");
+
+  const ownerPasswordError = passwordPolicyError(password);
+  if (ownerPasswordError) {
+    return setFormMessage(ownerRegisterError, ownerPasswordError);
+  }
+  if (password !== confirmPassword) {
+    return setFormMessage(ownerRegisterError, "The two passwords do not match.");
+  }
+
+  const lat = parseFloat(formData.get("lat"));
+  const lng = parseFloat(formData.get("lng"));
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+    return setFormMessage(
+      ownerRegisterError,
+      "Choose the shop location on the map (or enter latitude and longitude)."
+    );
+  }
+
+  const payload = {
+    kendraName: String(formData.get("kendraName") || "").trim(),
+    ownerName: String(formData.get("ownerName") || "").trim(),
+    email: String(formData.get("email") || "").trim().toLowerCase(),
+    password,
+    phone: String(formData.get("phone") || "").trim(),
+    address: String(formData.get("address") || "").trim(),
+    city: String(formData.get("city") || "").trim(),
+    district: String(formData.get("district") || "").trim(),
+    state: String(formData.get("state") || "").trim(),
+    pincode: String(formData.get("pincode") || "").trim(),
+    licenseNumber: String(formData.get("licenseNumber") || "").trim(),
+    operatingHours: String(formData.get("operatingHours") || "").trim(),
+    lat,
+    lng,
+  };
+
+  const requiredFields = [
+    ["kendraName", "Kendra / shop name"],
+    ["ownerName", "Owner / pharmacist name"],
+    ["email", "Email address"],
+    ["phone", "Counter phone"],
+    ["address", "Shop address"],
+    ["city", "City"],
+    ["state", "State"],
+    ["licenseNumber", "Drug license number"],
+  ];
+  const missing = requiredFields.filter(([key]) => !payload[key]);
+  if (missing.length) {
+    return setFormMessage(
+      ownerRegisterError,
+      `Please fill in: ${missing.map(([, label]) => label).join(", ")}.`
+    );
+  }
+
+  btnRegisterOwner.disabled = true;
+  btnRegisterOwner.textContent = "Submitting application…";
+
+  try {
+    const res = await registerKendraOwner(payload);
+    lastUnverifiedEmail = payload.email;
+    registerOwnerForm.reset();
+    if (ownerMarker && ownerMap) {
+      ownerMap.removeLayer(ownerMarker);
+      ownerMarker = null;
+    }
+    showRegisterSuccess({
+      title: "Kendra registration submitted",
+      message:
+        res.message ||
+        "Verify your email address. After that the PMBJP administrator will review your shop.",
+      email: payload.email,
+      link: res.devVerificationUrl || null,
+    });
+    showToast("Kendra application saved. Please verify your email.", "✉️");
+  } catch (err) {
+    const detail =
+      Array.isArray(err.details) && err.details.length
+        ? `${err.message}: ${err.details.join("; ")}`
+        : err.message;
+    setFormMessage(ownerRegisterError, detail || "Kendra registration failed.");
+  } finally {
+    btnRegisterOwner.disabled = false;
+    btnRegisterOwner.textContent = "Submit Kendra Registration";
+  }
+});
+
+// ---------------------------------------------------------------------
+// Email Verification
+// ---------------------------------------------------------------------
+async function handleVerifyRoute() {
+  const params = new URLSearchParams(window.location.search);
+  const token = params.get("token");
+  const email = params.get("email") || lastUnverifiedEmail;
+
+  if (resendEmail && !resendEmail.value && email) {
+    resendEmail.value = email;
+  }
+
+  setFormMessage(resendError, "");
+  setFormMessage(resendInfo, "");
+  setHidden(verifyDevLink, true);
+
+  if (!token) {
+    verifyIcon.textContent = "✉️";
+    verifyTitle.textContent = "Verify your email";
+    verifyMessage.textContent =
+      "Open the verification link we emailed you. Links expire after 24 hours. If yours has expired, request a new one below.";
+    setHidden(verifySpinner, true);
+    setHidden(verifyResendBlock, false);
+    return;
+  }
+
+  verifyIcon.textContent = "⏳";
+  verifyTitle.textContent = "Verifying your email";
+  verifyMessage.textContent = "Please wait while we confirm your verification link.";
+  setHidden(verifySpinner, false);
+  setHidden(verifyResendBlock, true);
+
+  try {
+    const res = await verifyEmail(token);
+    verifyIcon.textContent = "✓";
+    verifyTitle.textContent = "Email verified";
+    verifyMessage.textContent = res.message || "Your email address has been verified.";
+    setHidden(verifySpinner, true);
+    setHidden(verifyResendBlock, true);
+    showToast("Email verified. You can sign in now.", "✓");
+
+    // Remove the one-time token from the address bar.
+    window.history.replaceState({}, "", "/verify-email");
+  } catch (err) {
+    verifyIcon.textContent = "⚠️";
+    verifyTitle.textContent = "Verification failed";
+    verifyMessage.textContent =
+      err.message || "This verification link is invalid or has expired.";
+    setHidden(verifySpinner, true);
+    setHidden(verifyResendBlock, false);
+  }
+}
+
+resendForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setFormMessage(resendError, "");
+  setFormMessage(resendInfo, "");
+
+  const email = resendEmail.value.trim();
+  if (!email) {
+    setFormMessage(resendError, "Enter the email address you registered with.");
+    return;
+  }
+
+  btnResend.disabled = true;
+  btnResend.textContent = "Sending…";
+
+  try {
+    const res = await resendVerification(email);
+    lastUnverifiedEmail = email;
+    setFormMessage(resendInfo, res.message || "A new verification link has been sent.");
+    if (res.devVerificationUrl) {
+      verifyDevLink.href = res.devVerificationUrl;
+      setHidden(verifyDevLink, false);
+    }
+  } catch (err) {
+    setFormMessage(resendError, err.message || "Could not send a verification link.");
+  } finally {
+    btnResend.disabled = false;
+    btnResend.textContent = "Send a new verification link";
+  }
+});
+
+// ---------------------------------------------------------------------
+// Owner shop-location map (Leaflet + OpenStreetMap)
+// ---------------------------------------------------------------------
+const INDIA_CENTER = [22.9734, 78.6569];
+
+function setOwnerMapStatus(message, tone = "info") {
+  if (!ownerMapStatus) return;
+  ownerMapStatus.textContent = message;
+  ownerMapStatus.dataset.tone = tone;
+}
+
+function applyOwnerAddressDetails(address = {}, displayName = "") {
+  const city =
+    address.city ||
+    address.town ||
+    address.village ||
+    address.municipality ||
+    address.suburb ||
+    address.hamlet ||
+    "";
+  const district = address.state_district || address.county || address.city_district || "";
+  const state = address.state || "";
+  const pincode = address.postcode || "";
+
+  if (city) ownerCityInput.value = city;
+  if (district) ownerDistrictInput.value = district;
+  if (state) ownerStateInput.value = state;
+  if (pincode) ownerPincodeInput.value = pincode;
+
+  if (displayName) setOwnerMapStatus(`Pin set at ${displayName}`);
+}
+
+async function reverseGeocodeOwnerPin(lat, lng) {
+  setOwnerMapStatus("Looking up the address for this pin…");
+  try {
+    const url =
+      "https://nominatim.openstreetmap.org/reverse?format=jsonv2&addressdetails=1" +
+      `&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&accept-language=en`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(`Nominatim responded ${res.status}`);
+    const data = await res.json();
+    applyOwnerAddressDetails(data.address || {}, data.display_name || "");
+    if (!data.display_name) {
+      setOwnerMapStatus(`Pin set at ${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    }
+  } catch {
+    setOwnerMapStatus(
+      "Pin set. Address lookup is unavailable — enter city, state and pincode manually.",
+      "warn"
+    );
+  }
+}
+
+function setOwnerCoords(lat, lng, { pan = true, reverse = true } = {}) {
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+
+  ownerLatInput.value = lat.toFixed(6);
+  ownerLngInput.value = lng.toFixed(6);
+
+  if (ownerMap && window.L) {
+    if (!ownerMarker) {
+      ownerMarker = window.L.marker([lat, lng], { draggable: true }).addTo(ownerMap);
+      ownerMarker.on("dragend", () => {
+        const position = ownerMarker.getLatLng();
+        setOwnerCoords(position.lat, position.lng, { pan: false });
+      });
+    } else {
+      ownerMarker.setLatLng([lat, lng]);
+    }
+    if (pan) ownerMap.setView([lat, lng], Math.max(ownerMap.getZoom(), 15));
+  }
+
+  if (reverse) reverseGeocodeOwnerPin(lat, lng);
+}
+
+async function searchOwnerLocation(query) {
+  const term = String(query || "").trim();
+  if (!term) {
+    setOwnerMapStatus("Type an address, locality, city or pincode to search.", "warn");
+    return;
+  }
+
+  btnOwnerMapSearch.disabled = true;
+  setOwnerMapStatus(`Searching for “${term}”…`);
+
+  try {
+    const url =
+      "https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&limit=1" +
+      `&q=${encodeURIComponent(term)}&accept-language=en`;
+    const res = await fetch(url, { headers: { Accept: "application/json" } });
+    if (!res.ok) throw new Error(`Nominatim responded ${res.status}`);
+
+    const results = await res.json();
+    if (!Array.isArray(results) || results.length === 0) {
+      setOwnerMapStatus("No matching location found. Try a landmark, city or pincode.", "warn");
+      return;
+    }
+
+    const hit = results[0];
+    const lat = parseFloat(hit.lat);
+    const lng = parseFloat(hit.lon);
+    setOwnerCoords(lat, lng, { pan: true, reverse: false });
+    applyOwnerAddressDetails(hit.address || {}, hit.display_name || `${lat}, ${lng}`);
+  } catch {
+    setOwnerMapStatus(
+      "Location search is unavailable right now. Click the map or enter coordinates manually.",
+      "warn"
+    );
+  } finally {
+    btnOwnerMapSearch.disabled = false;
+  }
+}
+
+function initOwnerMap() {
+  const container = document.getElementById("owner-map");
+  if (!container) return;
+
+  if (ownerMapInitialized) {
+    ownerMap?.invalidateSize();
+    return;
+  }
+
+  if (!window.L) {
+    container.classList.add("map-picker__canvas--fallback");
+    container.innerHTML =
+      '<p>The map library could not be loaded (check your internet connection).<br />' +
+      "You can still enter the shop latitude and longitude manually below.</p>";
+    setOwnerMapStatus("Map unavailable — enter latitude and longitude manually.", "warn");
+    return;
+  }
+
+  ownerMapInitialized = true;
+
+  ownerMap = window.L.map(container, {
+    center: INDIA_CENTER,
+    zoom: 4,
+    scrollWheelZoom: true,
+  });
+
+  window.L
+    .tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+    })
+    .addTo(ownerMap);
+
+  ownerMap.on("click", (event) => {
+    setOwnerCoords(event.latlng.lat, event.latlng.lng, { pan: false });
+  });
+
+  const existingLat = parseFloat(ownerLatInput.value);
+  const existingLng = parseFloat(ownerLngInput.value);
+  if (Number.isFinite(existingLat) && Number.isFinite(existingLng)) {
+    setOwnerCoords(existingLat, existingLng, { pan: true, reverse: false });
+  }
+
+  requestAnimationFrame(() => ownerMap?.invalidateSize());
+  window.setTimeout(() => ownerMap?.invalidateSize(), 300);
+}
+
+btnOwnerMapSearch?.addEventListener("click", () => searchOwnerLocation(ownerMapSearch.value));
+
+ownerMapSearch?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    searchOwnerLocation(ownerMapSearch.value);
+  }
+});
+
+btnOwnerMapLocate?.addEventListener("click", () => {
+  if (!navigator.geolocation) {
+    setOwnerMapStatus("Geolocation is not supported by this browser.", "warn");
+    return;
+  }
+  setOwnerMapStatus("Requesting your device location…");
+  navigator.geolocation.getCurrentPosition(
+    (position) => {
+      setOwnerCoords(position.coords.latitude, position.coords.longitude, { pan: true });
+    },
+    () => setOwnerMapStatus("Could not access your location. Click the map instead.", "warn"),
+    { timeout: 8000 }
+  );
+});
+
+function syncOwnerCoordsFromInputs() {
+  const lat = parseFloat(ownerLatInput.value);
+  const lng = parseFloat(ownerLngInput.value);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return;
+  if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+    setOwnerMapStatus("Latitude must be −90…90 and longitude −180…180.", "warn");
+    return;
+  }
+  setOwnerCoords(lat, lng, { pan: true });
+}
+
+ownerLatInput?.addEventListener("change", syncOwnerCoordsFromInputs);
+ownerLngInput?.addEventListener("change", syncOwnerCoordsFromInputs);
 
 // Subtab toggling
 document.querySelectorAll(".subtab").forEach((btn) => {
@@ -429,6 +1179,35 @@ document.querySelectorAll(".subtab").forEach((btn) => {
     if (targetPanel) targetPanel.classList.add("is-active");
   });
 });
+
+// ---------------------------------------------------------------------
+// Auth guards for customer-only actions
+// ---------------------------------------------------------------------
+function requireCustomer(actionLabel = "continue") {
+  if (!currentUser) {
+    pendingRedirect = window.location.pathname || "/";
+    showToast(`Please sign in to ${actionLabel}.`, "🔒");
+    navigate("/login");
+    return false;
+  }
+  if (currentUser.role !== "customer") {
+    showToast("This action is available to customer accounts only.", "🔒");
+    return false;
+  }
+  return true;
+}
+
+async function ensureStoresLoaded() {
+  if (allStoresCache.length === 0) {
+    try {
+      const stores = await getAllStores();
+      allStoresCache = Array.isArray(stores) ? stores : [];
+    } catch {
+      allStoresCache = [];
+    }
+  }
+  return allStoresCache;
+}
 
 // ---------------------------------------------------------------------
 // Shopping Cart ("Add to Cart") Functionality
@@ -456,6 +1235,8 @@ function updateCartBadge() {
 }
 
 function addToCart(medicine, quantity = 1) {
+  if (!requireCustomer("add medicines to your cart")) return;
+
   const medId = medicine.id || medicine._id;
   const existing = cart.find((i) => i.medicineId === medId);
   const cheapestBranded = medicine.cheapestBrandedMrp || medicine.genericMrp * 2.5;
@@ -475,6 +1256,11 @@ function addToCart(medicine, quantity = 1) {
   }
 
   saveCartToStorage();
+  currentCartQuote = null;
+  if (cartDrawer.classList.contains("is-open")) {
+    renderCartDrawer(true);
+    refreshCartQuote();
+  }
   const savings = Math.max(0, (cheapestBranded - medicine.genericMrp) * quantity);
   showToast(`Added ${medicine.genericName} to Cart (Saved ₹${savings.toFixed(2)})`, "🛒");
 }
@@ -488,35 +1274,166 @@ function updateCartItemQty(medicineId, delta) {
     cart = cart.filter((i) => i.medicineId !== medicineId);
   }
   saveCartToStorage();
+  currentCartQuote = null;
   renderCartDrawer();
 }
 
 function removeFromCart(medicineId) {
   cart = cart.filter((i) => i.medicineId !== medicineId);
   saveCartToStorage();
+  currentCartQuote = null;
   renderCartDrawer();
 }
 
 async function openCartDrawer() {
+  if (!requireCustomer("open your cart")) return;
+
   cartDrawer.classList.add("is-open");
   cartDrawerBackdrop.classList.add("is-open");
   cartDrawer.setAttribute("aria-hidden", "false");
-  renderCartDrawer();
+  // Render the basket first without a quote; the quote starts after the Kendra
+  // options are populated so the selected store is sent with the request.
+  renderCartDrawer(true);
 
-  // Populate Kendra fulfillers dropdown
+  // Populate Kendra fulfilers from the database.
   try {
-    const res = await getAllMedicines(); // triggers list
-    cartKendraSelect.innerHTML = `
-      <option value="PMBJK02001">Jan Aushadhi Kendra - KEM Hospital Parel (Mumbai)</option>
-      <option value="PMBJK01001">Jan Aushadhi Kendra - AIIMS Ansari Nagar (New Delhi)</option>
-      <option value="PMBJK03001">Jan Aushadhi Kendra - Victoria Hospital (Bengaluru)</option>
-      <option value="PMBJK04001">Jan Aushadhi Kendra - NIMS Punjagutta (Hyderabad)</option>
-      <option value="PMBJK05001">Jan Aushadhi Kendra - Rasta Peth (Pune)</option>
-    `;
+    if (allStoresCache.length === 0) {
+      const stores = await getAllStores();
+      allStoresCache = Array.isArray(stores) ? stores : [];
+    }
+
+    if (allStoresCache.length > 0) {
+      const previous = cartKendraSelect.value;
+      cartKendraSelect.innerHTML = allStoresCache
+        .map(
+          (store) =>
+            `<option value="${esc(store.id || store.kendraCode)}">${esc(store.name)} (${esc(
+              store.city
+            )})</option>`
+        )
+        .join("");
+      if (previous && allStoresCache.some((s) => (s.id || s.kendraCode) === previous)) {
+        cartKendraSelect.value = previous;
+      }
+    } else {
+      cartKendraSelect.innerHTML = `<option value="">No active Kendras available</option>`;
+    }
   } catch {
-    cartKendraSelect.innerHTML = `<option value="PMBJK02001">Jan Aushadhi Kendra - Central Counter</option>`;
+    cartKendraSelect.innerHTML = `<option value="">Unable to load Kendra list</option>`;
+  }
+
+  refreshCartQuote();
+}
+
+async function refreshCartQuote() {
+  const requestId = ++cartQuoteRequestId;
+
+  if (!cart.length) {
+    currentCartQuote = null;
+    if (cartPriceNote) {
+      cartPriceNote.textContent = "Choose a Kendra to see live stock and the price for this cart.";
+      cartPriceNote.classList.remove("cart-price-note--warn");
+    }
+    if (cartBestPriceRow) cartBestPriceRow.hidden = true;
+    if (btnProceedPayment) btnProceedPayment.disabled = false;
+    return;
+  }
+
+  if (btnProceedPayment) {
+    btnProceedPayment.disabled = true;
+    btnProceedPayment.textContent = "Checking live Kendra stock…";
+  }
+
+  try {
+    const res = await quoteOrder({
+      kendraCode: cartKendraSelect.value || undefined,
+      items: cart.map((item) => ({
+        medicineId: item.medicineId,
+        quantity: item.quantity,
+      })),
+    });
+    // Ignore a slow response from an older selection.
+    if (requestId !== cartQuoteRequestId) return;
+    currentCartQuote = res;
+
+    if (res.selected?.kendraCode && !cartKendraSelect.value) {
+      cartKendraSelect.value = res.selected.kendraCode;
+    }
+    renderCartQuoteSummary();
+  } catch (err) {
+    if (requestId !== cartQuoteRequestId) return;
+    currentCartQuote = null;
+    if (cartPriceNote) {
+      cartPriceNote.textContent = err.message;
+      cartPriceNote.classList.add("cart-price-note--warn");
+    }
+    if (cartBestPriceRow) cartBestPriceRow.hidden = true;
+    if (btnProceedPayment) btnProceedPayment.disabled = true;
+  } finally {
+    if (requestId === cartQuoteRequestId && btnProceedPayment) {
+      btnProceedPayment.textContent = "Proceed to Instant Checkout & Pay";
+    }
   }
 }
+
+function renderCartQuoteSummary() {
+  const selected = currentCartQuote?.selected;
+  const best = currentCartQuote?.best;
+
+  if (!selected) {
+    if (cartPriceNote) {
+      cartPriceNote.textContent = "Choose a Kendra to see live stock and the price for this cart.";
+    }
+    return;
+  }
+
+  if (cartTotalPrice) {
+    cartTotalPrice.textContent = `₹${Number(selected.totalAmount || 0).toFixed(2)}`;
+  }
+  if (cartPriceNote) {
+    cartPriceNote.textContent = selected.canFulfill
+      ? `Selected: ${selected.kendraName} · every item is in stock at this Kendra.`
+      : `${selected.kendraName} cannot fulfil every item in this cart. Switch to another Kendra or reduce quantities.`;
+    cartPriceNote.classList.toggle("cart-price-note--warn", !selected.canFulfill);
+  }
+  if (btnProceedPayment) {
+    btnProceedPayment.disabled = !selected.canFulfill;
+  }
+
+  if (
+    best &&
+    best.canFulfill &&
+    best.kendraCode &&
+    best.kendraCode !== selected.kendraCode &&
+    best.totalAmount < selected.totalAmount
+  ) {
+    if (cartBestPriceRow) cartBestPriceRow.hidden = false;
+    if (cartBestPriceText) {
+      cartBestPriceText.textContent = `Best price for this cart: ₹${Number(
+        best.totalAmount
+      ).toFixed(2)} at ${best.kendraName}.`;
+    }
+  } else if (cartBestPriceRow) {
+    cartBestPriceRow.hidden = true;
+  }
+
+  // Re-render line items with the selected Kendra's prices.
+  renderCartDrawer(true);
+}
+
+cartKendraSelect?.addEventListener("change", () => {
+  currentCartQuote = null;
+  refreshCartQuote();
+});
+
+btnUseBestKendra?.addEventListener("click", () => {
+  const best = currentCartQuote?.best;
+  if (!best) return;
+  cartKendraSelect.value = best.kendraCode;
+  currentCartQuote = null;
+  refreshCartQuote();
+  showToast(`Switched to ${best.kendraName} — the best price for this cart.`, "✓");
+});
 
 function closeCartDrawer() {
   cartDrawer.classList.remove("is-open");
@@ -528,7 +1445,7 @@ btnOpenCart.addEventListener("click", openCartDrawer);
 cartDrawerClose.addEventListener("click", closeCartDrawer);
 cartDrawerBackdrop.addEventListener("click", closeCartDrawer);
 
-function renderCartDrawer() {
+function renderCartDrawer(skipQuote = false) {
   if (cart.length === 0) {
     cartItemsBody.innerHTML = `
       <div style="text-align: center; padding: 40px 16px; color: var(--ink-soft);">
@@ -541,6 +1458,14 @@ function renderCartDrawer() {
       </div>`;
     cartFooter.hidden = true;
     cartSavingsText.textContent = "Estimated savings vs branded: ₹0.00";
+    cartQuoteRequestId += 1;
+    currentCartQuote = null;
+    if (cartPriceNote) {
+      cartPriceNote.textContent = "Choose a Kendra to see live stock and the price for this cart.";
+      cartPriceNote.classList.remove("cart-price-note--warn");
+    }
+    if (cartBestPriceRow) cartBestPriceRow.hidden = true;
+    if (btnProceedPayment) btnProceedPayment.disabled = false;
     return;
   }
 
@@ -550,8 +1475,12 @@ function renderCartDrawer() {
 
   cartItemsBody.innerHTML = cart
     .map((item) => {
-      const itemSubtotal = item.genericMrp * item.quantity;
-      const itemSavings = (item.cheapestBrandedMrp - item.genericMrp) * item.quantity;
+      const quoted = currentCartQuote?.selected?.items?.find(
+        (quoteItem) => quoteItem.medicineId === item.medicineId
+      );
+      const unitPrice = Number(quoted?.unitPrice ?? item.genericMrp);
+      const itemSubtotal = unitPrice * item.quantity;
+      const itemSavings = (item.cheapestBrandedMrp - unitPrice) * item.quantity;
       total += itemSubtotal;
       totalSavings += Math.max(0, itemSavings);
 
@@ -559,7 +1488,9 @@ function renderCartDrawer() {
       <div class="cart-item">
         <div class="cart-item__info">
           <div class="cart-item__title">${esc(item.genericName)}</div>
-          <div class="cart-item__meta">${esc(item.packSize)} · ₹${item.genericMrp.toFixed(2)}/pack</div>
+          <div class="cart-item__meta">${esc(item.packSize)} · ₹${unitPrice.toFixed(2)}/pack${
+            quoted && quoted.available === false ? " · out of stock here" : ""
+          }</div>
         </div>
 
         <div class="cart-item__right">
@@ -575,8 +1506,11 @@ function renderCartDrawer() {
     })
     .join("");
 
-  cartTotalPrice.textContent = `₹${total.toFixed(2)}`;
+  const quotedTotal = currentCartQuote?.selected?.totalAmount;
+  cartTotalPrice.textContent = `₹${Number(quotedTotal ?? total).toFixed(2)}`;
   cartSavingsText.textContent = `Estimated savings vs branded: ₹${totalSavings.toFixed(2)}`;
+
+  if (!skipQuote) refreshCartQuote();
 }
 
 cartItemsBody.addEventListener("click", (e) => {
@@ -591,23 +1525,55 @@ cartItemsBody.addEventListener("click", (e) => {
 
 // Proceed from Cart to Simulated Payment
 btnProceedPayment.addEventListener("click", () => {
+  if (!requireCustomer("place an order")) return;
   if (cart.length === 0) return;
-  const kendraId = cartKendraSelect.value || "PMBJK02001";
-  const kendraName = cartKendraSelect.options[cartKendraSelect.selectedIndex]?.text || "Jan Aushadhi Kendra";
 
-  const totalAmount = cart.reduce((sum, item) => sum + item.genericMrp * item.quantity, 0);
+  const selectedQuote = currentCartQuote?.selected;
+  if (selectedQuote && !selectedQuote.canFulfill) {
+    showToast(
+      `${selectedQuote.kendraName} cannot fulfil the full cart. Switch Kendra or reduce quantities.`,
+      "⚠️"
+    );
+    return;
+  }
+
+  const kendraId =
+    selectedQuote?.kendraCode ||
+    cartKendraSelect.value ||
+    allStoresCache[0]?.id ||
+    allStoresCache[0]?.kendraCode ||
+    "";
+  const kendraName =
+    selectedQuote?.kendraName ||
+    cartKendraSelect.options[cartKendraSelect.selectedIndex]?.text ||
+    "Jan Aushadhi Kendra";
+
+  if (!kendraId) {
+    showToast("No active Jan Aushadhi Kendra is available to fulfil this order.", "⚠️");
+    return;
+  }
+
+  const items = cart.map((item) => {
+    const quoteItem = selectedQuote?.items?.find(
+      (entry) => entry.medicineId === item.medicineId
+    );
+    return {
+      medicineId: item.medicineId,
+      genericName: item.genericName,
+      packSize: item.packSize,
+      genericMrp: quoteItem?.unitPrice ?? item.genericMrp,
+      quantity: item.quantity,
+    };
+  });
+  const totalAmount =
+    selectedQuote?.totalAmount ??
+    items.reduce((sum, item) => sum + item.genericMrp * item.quantity, 0);
 
   closeCartDrawer();
   openPaymentSimulationModal({
     kendraId,
     kendraName,
-    items: cart.map((i) => ({
-      medicineId: i.medicineId,
-      genericName: i.genericName,
-      packSize: i.packSize,
-      genericMrp: i.genericMrp,
-      quantity: i.quantity,
-    })),
+    items,
     totalAmount,
   });
 });
@@ -624,12 +1590,15 @@ function closePaymentModal() {
 }
 
 function openPaymentSimulationModal(orderPayload) {
+  if (!requireCustomer("place an order")) return;
+
   checkoutOrderData = orderPayload;
 
   posCustomerName.textContent = currentUser.name;
   posKendraName.textContent = orderPayload.kendraName;
   posTotalAmount.textContent = `₹${orderPayload.totalAmount.toFixed(2)}`;
-  payDeliveryAddress.value = currentUser.address || "B-402, Green Glen Residences, Bellandur, Bengaluru - 560103";
+  payDeliveryAddress.value =
+    currentUser.address || "Counter Pickup at Jan Aushadhi Kendra";
 
   // Reset payment channel selection to UPI by default
   document.querySelectorAll(".pay-method-card").forEach((c) => c.classList.remove("is-selected"));
@@ -725,6 +1694,8 @@ btnRunPaymentSim.addEventListener("click", async () => {
 
         // Clear cart on successful order
         cart = [];
+        currentCartQuote = null;
+        cartQuoteRequestId += 1;
         saveCartToStorage();
 
         // Step 3 -> Show Success Receipt
@@ -750,7 +1721,7 @@ btnRunPaymentSim.addEventListener("click", async () => {
 
 btnViewOrderStatus.addEventListener("click", () => {
   closePaymentModal();
-  switchView("customer");
+  navigate("/account");
 });
 
 // ---------------------------------------------------------------------
@@ -1089,7 +2060,7 @@ document.querySelectorAll(".service-pill").forEach((pill) => {
 });
 
 // Brand logo button returns to search
-document.getElementById("brand-logo-btn")?.addEventListener("click", () => switchView("search"));
+document.getElementById("brand-logo-btn")?.addEventListener("click", () => navigate("/"));
 
 searchForm.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -1131,7 +2102,7 @@ if (btnHeroCompare) {
     if (query || cat) {
       handleSearch(query);
     } else {
-      const target = document.getElementById("search-results") || document.getElementById("categories-section");
+      const target = document.getElementById("search-results-section");
       if (target) {
         target.scrollIntoView({ behavior: "smooth", block: "start" });
       }
@@ -1145,7 +2116,7 @@ if (btnHeaderLocate) {
     if (targetMed) {
       openDrawer(targetMed);
     } else {
-      switchView("search");
+      navigate("/");
       searchInput.focus();
     }
   });
@@ -1159,7 +2130,7 @@ document.querySelectorAll(".quick-tag").forEach((btn) => {
 });
 
 // Card button delegation
-resultsGrid.addEventListener("click", (e) => {
+resultsGrid.addEventListener("click", async (e) => {
   const locateBtn = e.target.closest('[data-action="locate"]');
   const addCartBtn = e.target.closest('[data-action="add-cart"]');
   const buyNowBtn = e.target.closest('[data-action="buy-now"]');
@@ -1175,9 +2146,16 @@ resultsGrid.addEventListener("click", (e) => {
   } else if (addCartBtn) {
     addToCart(medicine, 1);
   } else if (buyNowBtn) {
+    if (!requireCustomer("place an order")) return;
+    const stores = await ensureStoresLoaded();
+    const store = stores[0];
+    if (!store) {
+      showToast("No active Jan Aushadhi Kendra is available right now.", "⚠️");
+      return;
+    }
     openPaymentSimulationModal({
-      kendraId: "PMBJK02001",
-      kendraName: "Jan Aushadhi Kendra - KEM Hospital Parel",
+      kendraId: store.id || store.kendraCode,
+      kendraName: store.name,
       items: [
         {
           medicineId: medicine.id || medicine._id,
@@ -1197,9 +2175,13 @@ resultsGrid.addEventListener("click", (e) => {
 // ---------------------------------------------------------------------
 function storeItemHTML(store) {
   const isStocked = store.inStock === true;
+  const isLowStock = isStocked && (store.isLowStock || store.stockStatus === "Low Stock");
+  const price = Number(store.price ?? store.medicineInfo?.price ?? store.medicineInfo?.genericMrp);
+  const priceLabel = Number.isFinite(price) ? `₹${price.toFixed(2)} / pack` : "Price on request";
+
   const stockBadge = isStocked
-    ? `<span class="stock-badge stock-badge--in">
-         ${icon.check} In Stock (${store.unitsAvailable ?? "Available"} units)
+    ? `<span class="stock-badge ${isLowStock ? "stock-badge--low" : "stock-badge--in"}">
+         ${isLowStock ? "⚠ Low Stock" : icon.check} ${isLowStock ? "" : "In Stock"} (${store.unitsAvailable ?? "Available"} units)
        </span>`
     : `<span class="stock-badge stock-badge--out">
          ${icon.cross} Out of Stock
@@ -1210,16 +2192,20 @@ function storeItemHTML(store) {
       ? `<span class="store-item__distance">${store.distanceKm} km away</span>`
       : `<span class="store-item__distance">${esc(store.city)}</span>`;
 
+  const bestPriceBadge = store.isBestPrice
+    ? `<span class="best-price-badge">★ Best price</span>`
+    : "";
+
   const orderOrAlertBtn = isStocked
-    ? `<button type="button" class="store-link store-link--order" data-action="order-from-store" data-kendra-id="${esc(store.id)}" data-kendra-name="${esc(store.name)}">
-         ${icon.bolt} Buy Here (Simulate Pay)
+    ? `<button type="button" class="store-link store-link--order" data-action="order-from-store" data-kendra-id="${esc(store.id)}" data-kendra-name="${esc(store.name)}" data-kendra-price="${Number.isFinite(price) ? price : ""}">
+         ${icon.bolt} Buy Here at ${priceLabel}
        </button>`
     : `<button type="button" class="store-link store-link--alert" data-action="alert-for-store" data-kendra-id="${esc(store.id)}" data-kendra-name="${esc(store.name)}">
          ${icon.bell} Notify When Restocked
        </button>`;
 
   return `
-    <li class="store-item ${isStocked ? "store-item--stocked" : "store-item--unstocked"}">
+    <li class="store-item ${isStocked ? "store-item--stocked" : "store-item--unstocked"} ${store.isBestPrice ? "store-item--best" : ""}">
       <div class="store-item__header">
         <div class="store-item__title-group">
           <span class="store-item__code">${esc(store.kendraCode || store.id)}</span>
@@ -1229,6 +2215,11 @@ function storeItemHTML(store) {
       </div>
 
       <p class="store-item__address">${esc(store.address)}</p>
+
+      <div class="store-item__price-row">
+        <span class="store-item__price">${priceLabel}</span>
+        ${bestPriceBadge}
+      </div>
 
       <div class="store-item__meta-row">
         <span class="store-item__hours">${icon.clock} ${esc(store.operatingHours || "08:30 AM - 09:00 PM")}</span>
@@ -1268,7 +2259,28 @@ function renderDrawerBody({ loading, kendras, error }) {
     return;
   }
 
-  drawerBody.innerHTML = `<ul class="drawer__list">${kendras.map(storeItemHTML).join("")}</ul>`;
+  const best =
+    kendras.find((store) => store.isBestPrice && store.inStock) ||
+    kendras.find((store) => store.inStock) ||
+    null;
+  const bestSummary = best
+    ? `<div class="drawer-best-price">
+         <div>
+           <span class="drawer-best-price__label">Best available price</span>
+           <div class="drawer-best-price__value">
+             ₹${Number(best.price ?? currentDrawerMedicine?.genericMrp ?? 0).toFixed(2)}
+             <span class="drawer-best-price__kendra">at ${esc(best.name)}</span>
+           </div>
+         </div>
+         <span class="drawer-best-price__hint">Switch to any Kendra below — stock and price update live from MongoDB.</span>
+       </div>`
+    : `<div class="drawer-best-price drawer-best-price--empty">
+         <span>No Kendra currently has this medicine in stock. Subscribe below for a restock alert.</span>
+       </div>`;
+
+  drawerBody.innerHTML = `${bestSummary}<ul class="drawer__list">${kendras
+    .map(storeItemHTML)
+    .join("")}</ul>`;
 }
 
 async function fetchKendrasForDrawer() {
@@ -1286,7 +2298,7 @@ async function fetchKendrasForDrawer() {
       lng,
       inStockOnly,
       city,
-      limit: 15,
+      limit: 50,
     });
     renderDrawerBody({ loading: false, kendras: res.kendras || [] });
   } catch (err) {
@@ -1369,8 +2381,11 @@ drawerBody.addEventListener("click", (e) => {
   const alertStoreBtn = e.target.closest('[data-action="alert-for-store"]');
 
   if (orderStoreBtn && currentDrawerMedicine) {
+    if (!requireCustomer("place an order")) return;
     const kendraId = orderStoreBtn.dataset.kendraId;
     const kendraName = orderStoreBtn.dataset.kendraName;
+    const kendraPrice =
+      parseFloat(orderStoreBtn.dataset.kendraPrice) || currentDrawerMedicine.genericMrp;
     closeDrawer();
     openPaymentSimulationModal({
       kendraId,
@@ -1380,13 +2395,14 @@ drawerBody.addEventListener("click", (e) => {
           medicineId: currentDrawerMedicine.id || currentDrawerMedicine._id,
           genericName: currentDrawerMedicine.genericName,
           packSize: currentDrawerMedicine.packSize || "10 Tablets",
-          genericMrp: currentDrawerMedicine.genericMrp,
+          genericMrp: kendraPrice,
           quantity: 1,
         },
       ],
-      totalAmount: currentDrawerMedicine.genericMrp,
+      totalAmount: kendraPrice,
     });
   } else if (alertStoreBtn && currentDrawerMedicine) {
+    if (!requireCustomer("subscribe to restock alerts")) return;
     const kendraId = alertStoreBtn.dataset.kendraId;
     closeDrawer();
     openAlertModal(currentDrawerMedicine, kendraId);
@@ -1397,10 +2413,17 @@ drawerBody.addEventListener("click", (e) => {
 // Out-of-Stock Alert ("Notify Me")
 // ---------------------------------------------------------------------
 function openAlertModal(medicine, kendraId = null) {
+  if (!requireCustomer("subscribe to restock alerts")) return;
+
   alertMedicineId.value = medicine.id || medicine._id;
   alertKendraId.value = kendraId || "";
   alertMedName.textContent = medicine.genericName;
   alertKendraName.textContent = kendraId ? `Kendra ${kendraId}` : "Any Nearby Kendra";
+  if (currentUser) {
+    alertCustomerName.value = currentUser.name || "";
+    alertCustomerEmail.value = currentUser.email || "";
+    alertCustomerPhone.value = currentUser.phone || "";
+  }
   alertModalBackdrop.hidden = false;
   const am = document.getElementById("alert-modal");
   if (am) am.hidden = false;
@@ -1419,33 +2442,25 @@ document.getElementById("btn-cancel-alert").addEventListener("click", () => {
 
 stockAlertForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (!requireCustomer("subscribe to restock alerts")) return;
+
   const formData = new FormData(stockAlertForm);
   const medicineId = formData.get("medicineId");
   const kendraId = formData.get("kendraId");
-  const customerName = formData.get("customerName");
-  const customerEmail = formData.get("customerEmail");
   const customerPhone = formData.get("customerPhone");
 
   try {
     const res = await subscribeStockAlert({
       medicineId,
       kendraId,
-      customerName,
-      customerEmail,
       customerPhone,
     });
 
     alertModalBackdrop.hidden = true;
     const am = document.getElementById("alert-modal");
     if (am) am.hidden = true;
-    showToast(`Subscribed! We will alert ${customerEmail} upon restock`, "🔔");
-
-    currentUser.name = customerName || currentUser.name;
-    currentUser.email = customerEmail;
-    currentUser.phone = customerPhone;
-    updateRoleUI();
-
-    switchView("customer");
+    showToast(res.message || "Restock alert subscribed.", "🔔");
+    navigate("/account");
   } catch (err) {
     alert(`Alert subscription failed: ${err.message}`);
   }
@@ -1454,12 +2469,26 @@ stockAlertForm.addEventListener("submit", async (e) => {
 // ---------------------------------------------------------------------
 // Kendra Owner Add Formulation
 // ---------------------------------------------------------------------
+function populateCategoryDatalist() {
+  if (!addProductCategoryOptions) return;
+  const categories = [...new Set(currentKendraCategories.filter(Boolean))].sort((a, b) =>
+    a.localeCompare(b)
+  );
+  addProductCategoryOptions.innerHTML = categories
+    .map((category) => `<option value="${esc(category)}"></option>`)
+    .join("");
+}
+
 btnOpenAddMed.addEventListener("click", () => {
-  if (currentUser.role !== "kendra_owner") {
-    currentUser = DEMO_PERSONAS.kendra;
-    localStorage.setItem("rxcompare_user", JSON.stringify(currentUser));
-    updateRoleUI();
+  if (!currentUser || currentUser.role !== "kendra_owner") {
+    showToast("Adding products requires an approved Kendra owner account.", "🔒");
+    return;
   }
+  if (!currentUser.kendraCode) {
+    showToast("Your Kendra application has not been approved yet.", "⏳");
+    return;
+  }
+  populateCategoryDatalist();
   addProductModalBackdrop.hidden = false;
   const apm = document.getElementById("add-product-modal");
   if (apm) apm.hidden = false;
@@ -1478,123 +2507,88 @@ document.getElementById("btn-cancel-product").addEventListener("click", () => {
 
 addProductForm.addEventListener("submit", async (e) => {
   e.preventDefault();
+  if (!currentUser || currentUser.role !== "kendra_owner" || !currentUser.kendraCode) {
+    showToast("Only an approved Kendra owner can add products.", "🔒");
+    return;
+  }
   const formData = new FormData(addProductForm);
-  const kendraId = currentUser.kendraId || "PMBJK02001";
+  const kendraCode = currentUser.kendraCode;
 
   const medData = {
-    genericName: formData.get("genericName"),
-    composition: formData.get("composition"),
-    category: formData.get("category"),
-    packSize: formData.get("packSize"),
+    genericName: String(formData.get("genericName") || "").trim(),
+    composition: String(formData.get("composition") || "").trim(),
+    category: String(formData.get("category") || "").trim(),
+    packSize: String(formData.get("packSize") || "").trim(),
     genericMrp: parseFloat(formData.get("genericMrp")),
     units: parseInt(formData.get("units"), 10),
   };
 
+  const priceField = String(formData.get("price") || "").trim();
+  if (priceField) medData.price = parseFloat(priceField);
+
+  if (!medData.category) {
+    showToast("Choose an existing category or type a new category name.", "⚠️");
+    return;
+  }
+  if (!Number.isFinite(medData.genericMrp) || medData.genericMrp <= 0) {
+    showToast("Enter a valid catalog MRP.", "⚠️");
+    return;
+  }
+  if (medData.price !== undefined && (!Number.isFinite(medData.price) || medData.price <= 0)) {
+    showToast("Enter a selling price greater than zero, or leave it blank.", "⚠️");
+    return;
+  }
+
+  const submitBtn = addProductForm.querySelector('button[type="submit"]');
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Adding…";
+  }
+
   try {
-    await addMedicineToKendra(kendraId, medData);
+    const res = await addMedicineToKendra(kendraCode, medData);
     addProductModalBackdrop.hidden = true;
     const apm = document.getElementById("add-product-modal");
     if (apm) apm.hidden = true;
     addProductForm.reset();
-    showToast("Formulation successfully added to Kendra inventory!", "✓");
+    showToast(
+      res.isNewMedicine === false
+        ? "Existing formulation added to your Kendra stock with the new price."
+        : "Formulation successfully added to Kendra inventory!",
+      "✓"
+    );
+    if (res.triggeredAlerts > 0) {
+      showToast(
+        `${res.triggeredAlerts} waiting customer(s) were notified that this medicine is back in stock.`,
+        "🔔"
+      );
+    }
     loadKendraDashboard();
   } catch (err) {
-    alert(`Failed to add product: ${err.message}`);
-  }
-});
-
-// ---------------------------------------------------------------------
-// User Role Persona Switcher
-// ---------------------------------------------------------------------
-function renderPersonaUsers(users) {
-  return users
-    .map((user) => `
-      <div class="persona-item">
-        <div>
-          <div style="font-weight: 700; color: var(--navy-deep); font-size: 0.95rem;">
-            ${esc(user.name)}
-            <span class="user-pill__role-tag" style="margin-left: 6px; font-size: 0.72rem; padding: 2px 6px;">${esc(user.role)}</span>
-            ${user.status === "pending" ? `<span class="badge badge--amber" style="margin-left: 4px; font-size: 0.7rem;">Pending</span>` : ""}
-          </div>
-          <p class="text-subtle" style="margin: 2px 0 0; font-size: 0.8rem;">${esc(user.email)} ${user.kendraName ? `· ${esc(user.kendraName)}` : ""}</p>
-        </div>
-        <button type="button" class="btn btn--outline btn--sm" data-action="switch-to-user" data-email="${esc(user.email)}">
-          Login as ${esc(user.name.split(" ")[0])}
-        </button>
-      </div>`)
-    .join("");
-}
-
-btnOpenPersona.addEventListener("click", async () => {
-  personaModalBackdrop.hidden = false;
-  const pm = document.getElementById("persona-modal");
-  if (pm) pm.hidden = false;
-
-  const container = document.getElementById("persona-cards-container");
-  container.innerHTML = `<p class="text-subtle" style="padding: 12px; text-align: center;">Loading persona credentials…</p>`;
-
-  try {
-    const res = await getDemoUsers();
-    if (!Array.isArray(res.users) || res.users.length === 0) {
-      throw new Error("No demo users are available from the server");
+    showToast(`Failed to add product: ${err.message}`, "⚠️");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Add Formulation to Kendra";
     }
-    availablePersonaUsers = res.users;
-    container.innerHTML = renderPersonaUsers(availablePersonaUsers);
-  } catch (err) {
-    availablePersonaUsers = LOCAL_DEMO_USERS;
-    container.innerHTML = `
-      <p class="text-subtle" role="status" style="margin: 0 0 12px;">
-        The server is unavailable; local demo profiles are available.
-      </p>
-      ${renderPersonaUsers(availablePersonaUsers)}`;
   }
-});
-
-document.getElementById("btn-close-persona-modal").addEventListener("click", () => {
-  personaModalBackdrop.hidden = true;
-  const pm = document.getElementById("persona-modal");
-  if (pm) pm.hidden = true;
-});
-
-document.getElementById("persona-cards-container").addEventListener("click", (e) => {
-  const btn = e.target.closest('[data-action="switch-to-user"]');
-  if (!btn) return;
-  const user = availablePersonaUsers.find((persona) => persona.email === btn.dataset.email);
-  if (!user) {
-    showToast("That demo profile is no longer available. Reopen the role switcher and try again.", "!");
-    return;
-  }
-  switchUser(user);
-});
-
-document.querySelectorAll(".btn-persona").forEach((btn) => {
-  btn.addEventListener("click", async () => {
-    const email = btn.dataset.email;
-    try {
-      const res = await loginUser(email);
-      switchUser(res.user);
-    } catch {
-      switchUser({
-        id: `usr-${Date.now()}`,
-        name: btn.textContent.trim(),
-        email,
-        role: btn.dataset.role,
-      });
-    }
-  });
 });
 
 // ---------------------------------------------------------------------
 // VIEW 2: Customer Dashboard (Orders & Alerts)
 // ---------------------------------------------------------------------
 async function loadCustomerDashboard() {
+  if (!currentUser || currentUser.role !== "customer") {
+    return;
+  }
+
   customerOrdersList.innerHTML = `<div class="drawer__loading"><div class="spinner"></div><p>Fetching your orders…</p></div>`;
   customerAlertsList.innerHTML = `<div class="drawer__loading"><div class="spinner"></div><p>Fetching your restock alerts…</p></div>`;
 
   try {
     const [ordersRes, alertsRes] = await Promise.all([
-      getMyOrders(currentUser.email),
-      getMyStockAlerts(currentUser.email),
+      getMyOrders(),
+      getMyStockAlerts(),
     ]);
 
     const orders = ordersRes.orders || [];
@@ -1707,39 +2701,53 @@ btnRefreshCustomer.addEventListener("click", loadCustomerDashboard);
 // VIEW 3: Kendra Owner Dashboard (Add Medicines & Update Stock)
 // ---------------------------------------------------------------------
 async function loadKendraDashboard() {
-  if (currentUser.role !== "kendra_owner") {
-    kendraRegisterSection.hidden = false;
+  if (!currentUser || currentUser.role !== "kendra_owner") {
     kendraHubSection.hidden = true;
     kendraPendingBanner.hidden = true;
-    kendraDashTitle.textContent = "Jan Aushadhi Kendra Registration";
+    kendraDashTitle.textContent = "Jan Aushadhi Kendra Management Portal";
     return;
   }
 
-  if (currentUser.status === "pending") {
+  // Owners can be approved while their session is still open. Refresh the
+  // session from MongoDB so the portal unlocks without requiring a new login.
+  if (!currentUser.kendraCode) {
+    try {
+      const res = await fetchMe();
+      if (res.user) {
+        currentUser = { ...currentUser, ...res.user };
+        updateRoleUI();
+      }
+    } catch {
+      // Keep the cached profile if the refresh fails.
+    }
+  }
+
+  if (!currentUser.kendraCode || currentUser.status === "pending") {
     kendraPendingBanner.hidden = false;
-    pendingKendraName.textContent = currentUser.kendraName || "Your Kendra";
-    kendraRegisterSection.hidden = true;
+    pendingKendraName.textContent =
+      currentUser.kendraName || "Your Jan Aushadhi Kendra application";
     kendraHubSection.hidden = true;
     kendraDashTitle.textContent = `${currentUser.kendraName || "Jan Aushadhi Kendra"} (Pending Admin Approval)`;
     return;
   }
 
   kendraPendingBanner.hidden = true;
-  kendraRegisterSection.hidden = true;
   kendraHubSection.hidden = false;
 
-  const kendraId = currentUser.kendraId || "PMBJK02001";
-  kendraDashTitle.textContent = `${currentUser.kendraName || "Jan Aushadhi Kendra Counter"}`;
+  const kendraCode = currentUser.kendraCode;
+  kendraDashTitle.textContent = `${currentUser.kendraName || kendraCode}`;
 
   try {
     const [invRes, ordersRes] = await Promise.all([
-      getKendraInventory(kendraId),
-      getKendraOrders(kendraId),
+      getKendraInventory(kendraCode),
+      getKendraOrders(kendraCode),
     ]);
 
     const items = invRes.items || [];
     const orders = ordersRes.orders || [];
     currentKendraInventory = items;
+    currentKendraCategories = invRes.categories || [];
+    populateCategoryDatalist();
 
     const inStockCount = items.filter((i) => i.inStock).length;
     const outStockCount = items.length - inStockCount;
@@ -1760,7 +2768,7 @@ async function loadKendraDashboard() {
 
 function renderKendraInventoryTable(items) {
   if (items.length === 0) {
-    kendraInventoryTbody.innerHTML = `<tr><td colspan="8" style="text-align: center; padding: 24px;">No formulations indexed for this Kendra yet. Click "+ Add New Medicine Product" above to add.</td></tr>`;
+    kendraInventoryTbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 24px;">No formulations indexed for this Kendra yet. Click "+ Add New Medicine Product" above to add.</td></tr>`;
     return;
   }
 
@@ -1771,24 +2779,42 @@ function renderKendraInventoryTable(items) {
         <td class="mono"><strong>${esc(item.drugCode)}</strong></td>
         <td>
           <div style="font-weight: 600; color: var(--navy-deep);">${esc(item.genericName)}</div>
-          <div class="text-subtle" style="font-size: 0.76rem;">${esc(item.composition)}</div>
+          <div class="text-subtle" style="font-size: 0.76rem;">${esc(item.composition)} · ${esc(item.category || "General")}</div>
         </td>
         <td>${esc(item.packSize)}</td>
-        <td class="mono font-bold">₹${item.genericMrp.toFixed(2)}</td>
+        <td class="mono text-subtle">₹${Number(item.basePrice ?? item.genericMrp).toFixed(2)}</td>
+        <td>
+          <div class="stock-input-group">
+            <input type="number" min="0.01" step="0.01" value="${Number(item.price ?? item.genericMrp).toFixed(2)}"
+              class="stock-price-input" data-field="price" aria-label="Selling price" />
+          </div>
+        </td>
         <td class="mono text-subtle" style="font-size: 0.78rem;">${esc(item.batchNumber)} <br/> Exp: ${esc(item.expiryDate)}</td>
         <td>
           <div class="stock-input-group">
-            <input type="number" min="0" value="${item.units}" class="stock-units-input" data-field="units" />
+            <input type="number" min="0" value="${item.units}" class="stock-units-input" data-field="units" aria-label="Stock units" />
           </div>
         </td>
         <td>
-          <span class="stock-badge ${item.inStock ? "stock-badge--in" : "stock-badge--out"}">
-            ${item.inStock ? `${icon.check} In Stock` : `${icon.cross} Out of Stock`}
+          <span class="stock-badge ${
+            item.inStock
+              ? item.isLowStock
+                ? "stock-badge--low"
+                : "stock-badge--in"
+              : "stock-badge--out"
+          }">
+            ${
+              item.inStock
+                ? item.isLowStock
+                  ? `Low Stock (${item.units})`
+                  : `${icon.check} In Stock`
+                : `${icon.cross} Out of Stock`
+            }
           </span>
         </td>
         <td>
           <button type="button" class="btn btn--outline btn--sm" data-action="save-stock">
-            Update Stock
+            Save Price &amp; Stock
           </button>
         </td>
       </tr>`
@@ -1852,9 +2878,10 @@ kendraInventorySearch.addEventListener("input", (e) => {
   }
   const filtered = currentKendraInventory.filter(
     (i) =>
-      i.genericName.toLowerCase().includes(term) ||
-      i.drugCode.toLowerCase().includes(term) ||
-      i.composition.toLowerCase().includes(term)
+      String(i.genericName || "").toLowerCase().includes(term) ||
+      String(i.drugCode || "").toLowerCase().includes(term) ||
+      String(i.composition || "").toLowerCase().includes(term) ||
+      String(i.category || "").toLowerCase().includes(term)
   );
   renderKendraInventoryTable(filtered);
 });
@@ -1862,32 +2889,51 @@ kendraInventorySearch.addEventListener("input", (e) => {
 kendraInventoryTbody.addEventListener("click", async (e) => {
   const btn = e.target.closest('[data-action="save-stock"]');
   if (!btn) return;
+  if (!currentUser || currentUser.role !== "kendra_owner" || !currentUser.kendraCode) {
+    showToast("Only an approved Kendra owner can update stock.", "🔒");
+    return;
+  }
   const tr = btn.closest("tr");
   const medId = tr.dataset.medId;
   const unitsInput = tr.querySelector('[data-field="units"]');
+  const priceInput = tr.querySelector('[data-field="price"]');
   const units = parseInt(unitsInput.value, 10);
+  const price = parseFloat(priceInput.value);
 
-  const kendraId = currentUser.kendraId || "PMBJK02001";
+  if (!Number.isFinite(units) || units < 0) {
+    showToast("Enter a valid stock quantity.", "⚠️");
+    return;
+  }
+  if (!Number.isFinite(price) || price <= 0) {
+    showToast("Enter a valid selling price greater than zero.", "⚠️");
+    return;
+  }
+
+  const kendraCode = currentUser.kendraCode;
   btn.disabled = true;
   btn.textContent = "Saving…";
 
   try {
-    const res = await updateKendraStock(kendraId, medId, {
+    const res = await updateKendraStock(kendraCode, medId, {
       units,
+      price,
       inStock: units > 0,
     });
 
     if (res.triggeredAlerts > 0) {
-      alert(`Stock updated! Restocked batch automatically notified ${res.triggeredAlerts} waiting customer(s)!`);
+      showToast(
+        `Stock and price saved. ${res.triggeredAlerts} waiting customer(s) were notified about the restock.`,
+        "🔔"
+      );
     } else {
-      showToast("Stock units updated successfully!", "✓");
+      showToast("Price and stock synchronised to MongoDB.", "✓");
     }
     loadKendraDashboard();
   } catch (err) {
-    alert(`Failed to update stock: ${err.message}`);
+    showToast(`Failed to update stock: ${err.message}`, "⚠️");
   } finally {
     btn.disabled = false;
-    btn.textContent = "Update Stock";
+    btn.textContent = "Save Price & Stock";
   }
 });
 
@@ -1908,55 +2954,98 @@ kendraOrdersList.addEventListener("click", async (e) => {
   }
 });
 
-kendraRegisterForm.addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const formData = new FormData(kendraRegisterForm);
-  const data = Object.fromEntries(formData.entries());
-
-  try {
-    const res = await registerKendra(data);
-    alert(res.message);
-
-    currentUser.role = "kendra_owner";
-    currentUser.kendraName = res.application.name;
-    currentUser.status = "pending";
-    updateRoleUI();
-    loadKendraDashboard();
-  } catch (err) {
-    alert(`Registration failed: ${err.message}`);
-  }
-});
-
 // ---------------------------------------------------------------------
 // VIEW 4: Admin Portal (Accept/Reject Kendra Owner Requests)
 // ---------------------------------------------------------------------
 async function loadAdminDashboard() {
+  if (!currentUser || currentUser.role !== "admin") {
+    return;
+  }
+
   try {
-    const [statsRes, appsRes, ordersRes] = await Promise.all([
+    const [statsRes, appsRes, ordersRes, usersRes] = await Promise.all([
       getAdminStats(),
       getAdminApplications(),
       getAdminOrders(),
+      getAdminUsers("all"),
     ]);
 
     const stats = statsRes.stats || {};
     const apps = appsRes.applications || [];
     const orders = ordersRes.orders || [];
+    const users = usersRes.users || [];
 
-    kpiAdminKendras.textContent = stats.totalKendras;
-    kpiAdminPending.textContent = stats.pendingApplications;
-    kpiAdminOrders.textContent = stats.totalOrders;
-    kpiAdminSavings.textContent = `₹${stats.estimatedSavings.toLocaleString()}`;
+    kpiAdminKendras.textContent = stats.totalKendras ?? 0;
+    kpiAdminPending.textContent = stats.pendingApplications ?? 0;
+    kpiAdminOrders.textContent = stats.totalOrders ?? 0;
+    kpiAdminSavings.textContent = `₹${Number(stats.estimatedSavings || 0).toLocaleString()}`;
+    kpiAdminCustomers.textContent = stats.totalCustomers ?? 0;
+    kpiAdminOwners.textContent = `${stats.approvedOwners ?? 0} / ${stats.pendingOwners ?? 0}`;
 
     countAdminPending.textContent = apps.filter((a) => a.status === "pending").length;
     countAdminOrders.textContent = orders.length;
-    adminPendingCountBadge.textContent = stats.pendingApplications;
-    adminPendingCountBadge.hidden = stats.pendingApplications === 0;
+    countAdminUsers.textContent = users.length;
+    adminPendingCountBadge.textContent = stats.pendingApplications ?? 0;
+    adminPendingCountBadge.hidden = (stats.pendingApplications ?? 0) === 0;
 
     renderAdminApplications(apps);
     renderAdminOrders(orders);
+    renderAdminUsers(users);
   } catch (err) {
-    alert(`Admin load error: ${err.message}`);
+    showToast(`Admin load error: ${err.message}`, "⚠️");
   }
+}
+
+function renderAdminUsers(users) {
+  if (!adminUsersTbody) return;
+  if (users.length === 0) {
+    adminUsersTbody.innerHTML = `<tr><td colspan="6" style="text-align:center; padding: 24px;">No registered customers or Kendra owners yet.</td></tr>`;
+    return;
+  }
+
+  adminUsersTbody.innerHTML = users
+    .map((user) => {
+      const roleLabel = user.role === "kendra_owner" ? "Kendra Owner" : "Customer";
+      const statusClass =
+        user.status === "approved" || user.status === "active"
+          ? "ready"
+          : user.status === "rejected"
+          ? "cancelled"
+          : "confirmed";
+      return `
+        <tr data-user-id="${esc(user.id)}" data-user-name="${esc(user.name)}">
+          <td>
+            <strong>${esc(user.name)}</strong>
+            <div class="text-subtle">${esc(user.email)}${user.phone ? ` · ${esc(user.phone)}` : ""}</div>
+          </td>
+          <td>
+            <span class="status-pill status-pill--${user.role === "kendra_owner" ? "confirmed" : "placed"}">
+              ${esc(roleLabel)}
+            </span>
+          </td>
+          <td>
+            <span class="status-pill status-pill--${statusClass}">${esc(user.status)}</span>
+          </td>
+          <td>
+            ${
+              user.role === "kendra_owner"
+                ? `<div>${esc(user.kendraName || "—")}</div><div class="text-subtle mono">${esc(
+                    user.kendraCode || "Not approved yet"
+                  )}</div>`
+                : `<span class="text-subtle">—</span>`
+            }
+          </td>
+          <td class="text-subtle">${
+            user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"
+          }</td>
+          <td>
+            <button type="button" class="btn btn--outline btn--sm" data-action="delete-user">
+              Delete
+            </button>
+          </td>
+        </tr>`;
+    })
+    .join("");
 }
 
 function renderAdminApplications(apps) {
@@ -1968,7 +3057,7 @@ function renderAdminApplications(apps) {
   adminApprovalsTbody.innerHTML = apps
     .map(
       (app) => `
-      <tr data-app-id="${esc(app.id)}">
+      <tr data-app-id="${esc(app.id)}" data-app-name="${esc(app.name)}">
         <td class="mono"><strong>${esc(app.kendraCode || app.id)}</strong></td>
         <td>
           <div style="font-weight: 600; color: var(--navy-deep);">${esc(app.name)}</div>
@@ -2033,29 +3122,131 @@ adminApprovalsTbody.addEventListener("click", async (e) => {
 
   const tr = e.target.closest("tr");
   const appId = tr.dataset.appId;
+  const appName = tr.dataset.appName || "this Kendra";
 
   if (approveBtn) {
     approveBtn.disabled = true;
     approveBtn.textContent = "Approving…";
     try {
       const res = await approveApplication(appId);
-      alert(res.message);
-      showToast("Kendra approved and active in network!", "✓");
-      loadAdminDashboard();
+      showToast(
+        res.message || `${appName} approved and active in the PMBJP network.`,
+        "✓"
+      );
+      await loadAdminDashboard();
     } catch (err) {
-      alert(`Approval error: ${err.message}`);
+      showToast(`Approval error: ${err.message}`, "⚠️");
+      approveBtn.disabled = false;
+      approveBtn.textContent = "Approve & Activate Kendra";
     }
   } else if (rejectBtn) {
-    const reason = prompt("Enter reason for declining application:", "Incomplete documentation");
-    if (!reason) return;
-    rejectBtn.disabled = true;
-    try {
-      const res = await rejectApplication(appId, reason);
-      alert(res.message);
-      loadAdminDashboard();
-    } catch (err) {
-      alert(`Reject error: ${err.message}`);
+    openRejectApplicationModal(appId, appName);
+  }
+});
+
+function openRejectApplicationModal(appId, appName) {
+  rejectApplicationTarget = appId;
+  if (rejectApplicationId) rejectApplicationId.value = appId;
+  if (rejectApplicationName) rejectApplicationName.textContent = appName;
+  if (rejectApplicationReason) rejectApplicationReason.value = "Incomplete documentation";
+  if (rejectApplicationBackdrop) rejectApplicationBackdrop.hidden = false;
+  if (rejectApplicationModal) rejectApplicationModal.hidden = false;
+  if (rejectApplicationReason) rejectApplicationReason.focus();
+}
+
+function closeRejectApplicationModal() {
+  rejectApplicationTarget = null;
+  if (rejectApplicationBackdrop) rejectApplicationBackdrop.hidden = true;
+  if (rejectApplicationModal) rejectApplicationModal.hidden = true;
+}
+
+document
+  .getElementById("btn-close-reject-application")
+  ?.addEventListener("click", closeRejectApplicationModal);
+document
+  .getElementById("btn-cancel-reject-application")
+  ?.addEventListener("click", closeRejectApplicationModal);
+rejectApplicationBackdrop?.addEventListener("click", closeRejectApplicationModal);
+
+rejectApplicationForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const appId = rejectApplicationTarget || rejectApplicationId?.value;
+  const reason = String(rejectApplicationReason?.value || "").trim();
+  if (!appId) return;
+  if (!reason) {
+    showToast("Enter a reason for the rejection.", "⚠️");
+    return;
+  }
+
+  const submitBtn = document.getElementById("btn-confirm-reject-application");
+  if (submitBtn) {
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Rejecting…";
+  }
+
+  try {
+    const res = await rejectApplication(appId, reason);
+    closeRejectApplicationModal();
+    showToast(res.message || "Application rejected.", "✓");
+    await loadAdminDashboard();
+  } catch (err) {
+    showToast(`Reject error: ${err.message}`, "⚠️");
+  } finally {
+    if (submitBtn) {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Confirm Rejection";
     }
+  }
+});
+
+// Two-step inline confirmation keeps deletion safe without a blocking dialog.
+adminUsersTbody?.addEventListener("click", async (event) => {
+  const btn = event.target.closest('[data-action="delete-user"]');
+  if (!btn) return;
+
+  const row = btn.closest("tr");
+  const userId = row?.dataset.userId;
+  const userName = row?.dataset.userName || "this account";
+
+  if (btn.dataset.confirm !== "1") {
+    adminUsersTbody.querySelectorAll('[data-action="delete-user"]').forEach((other) => {
+      other.dataset.confirm = "";
+      other.textContent = "Delete";
+      other.disabled = false;
+      other.classList.add("btn--outline");
+      other.classList.remove("btn--danger");
+    });
+    btn.dataset.confirm = "1";
+    btn.textContent = "Confirm delete";
+    btn.classList.remove("btn--outline");
+    btn.classList.add("btn--danger");
+
+    setTimeout(() => {
+      if (btn.isConnected && btn.dataset.confirm === "1") {
+        btn.dataset.confirm = "";
+        btn.textContent = "Delete";
+        btn.classList.add("btn--outline");
+        btn.classList.remove("btn--danger");
+      }
+    }, 6000);
+    return;
+  }
+
+  if (!userId) return;
+  btn.disabled = true;
+  btn.textContent = "Deleting…";
+
+  try {
+    const res = await deleteAdminUser(userId);
+    showToast(res.message || `${userName} deleted permanently.`, "🗑️");
+    await loadAdminDashboard();
+  } catch (err) {
+    showToast(`Delete error: ${err.message}`, "⚠️");
+    btn.disabled = false;
+    btn.textContent = "Delete";
+    btn.dataset.confirm = "";
+    btn.classList.add("btn--outline");
+    btn.classList.remove("btn--danger");
   }
 });
 
@@ -2065,18 +3256,20 @@ btnRefreshAdmin.addEventListener("click", loadAdminDashboard);
 // Bootstrapping
 // ---------------------------------------------------------------------
 async function initApp() {
-  const saved = localStorage.getItem("rxcompare_user");
-  if (saved) {
-    try {
-      currentUser = JSON.parse(saved);
-    } catch {
-      // keep default
-    }
-  }
-
   loadCartFromStorage();
   updateRoleUI();
 
+  // Resolve the real session from the httpOnly cookie.
+  try {
+    const res = await fetchMe();
+    currentUser = res.user || null;
+  } catch {
+    currentUser = null;
+  }
+  authReady = true;
+  updateRoleUI();
+
+  // Public catalog + network statistics (available to guests).
   try {
     const [status, medicines] = await Promise.all([
       getUhiStatus().catch(() => null),
@@ -2098,15 +3291,31 @@ async function initApp() {
       renderSearchResults({ loading: false, results: medicines.slice(0, 9), searched: false, error: null });
     }
   } catch (err) {
-    // Graceful fallback
+    renderSearchResults({
+      loading: false,
+      results: [],
+      searched: true,
+      error:
+        "Could not load the medicine catalogue. Make sure MongoDB is running and the database is seeded (npm run seed).",
+    });
   }
+
+  renderRoute();
 }
 
-// Footer navigation links
+// In-app route links (auth pages, footer, etc.)
+document.addEventListener("click", (event) => {
+  const routeLink = event.target.closest("a[data-route]");
+  if (!routeLink) return;
+  event.preventDefault();
+  navigate(routeLink.getAttribute("data-route") || "/");
+});
+
+// Footer portal links
 document.querySelectorAll(".footer__link[data-view]").forEach((link) => {
   link.addEventListener("click", (e) => {
     e.preventDefault();
-    switchView(link.dataset.view);
+    navigate(routeForView(link.dataset.view));
   });
 });
 

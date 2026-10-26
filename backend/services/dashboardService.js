@@ -1,284 +1,91 @@
 /**
- * RxCompare Multi-Role Dashboard Service
+ * RxCompare Multi-Role Dashboard Service (MongoDB backed)
  *
- * Implements dedicated functions and powers for:
- * 1. Admin:
- *    - Global KPIs (Kendras, pending approvals, catalog, orders, network savings)
- *    - Review, approve, or reject Kendra owner applications
- *    - System-wide orders and inventory audit
- *
- * 2. Kendra Owner:
- *    - Kendra registration submission
- *    - Product & stock inventory management (units in stock, batch, inStock status)
- *    - Order fulfillment workflow (Placed -> Confirmed -> Ready -> Completed)
- *    - View stock alerts and restock triggers
- *
- * 3. Customer:
- *    - Real-time in-stock checking
- *    - Online medicine ordering (with delivery/pickup and Kendra assignment)
- *    - Out-of-stock alert notifications ("Notify Me when back in stock")
- *    - Order tracking history
+ * Admin:
+ *   - Global KPIs, Kendra approvals, network order audit
+ * Kendra Owner:
+ *   - Inventory / stock management, order fulfilment
+ * Customer:
+ *   - Online ordering, order history, out-of-stock alerts
  */
 
+const Medicine = require("../models/Medicine");
+const User = require("../models/User");
+const Kendra = require("../models/Kendra");
+const Inventory = require("../models/Inventory");
+const KendraApplication = require("../models/KendraApplication");
+const Order = require("../models/Order");
+const StockAlert = require("../models/StockAlert");
+const Counter = require("../models/Counter");
 const uhiGatewayService = require("./uhiGatewayService");
+const { sendKendraDecisionEmail } = require("./emailService");
 
-// -----------------------------------------------------------------------------
-// Seeded Demo Users
-// -----------------------------------------------------------------------------
-const INITIAL_USERS = [
-  {
-    id: "usr-admin-1",
-    name: "Dr. Rajesh Varma",
-    email: "admin@rxcompare.gov.in",
-    role: "admin",
-    designation: "Chief PMBJP Network Administrator",
-    phone: "+91 11 2338 5642",
-    status: "active",
-  },
-  {
-    id: "usr-kendra-1",
-    name: "Sunil Deshmukh",
-    email: "parel.kendra@pmbjp.in",
-    role: "kendra_owner",
-    kendraId: "PMBJK02001",
-    kendraName: "Jan Aushadhi Kendra - KEM Hospital Parel",
-    phone: "+91 98201 44552",
-    status: "approved",
-  },
-  {
-    id: "usr-kendra-2",
-    name: "Anita Saxena",
-    email: "anita.kendra@pmbjp.in",
-    role: "kendra_owner",
-    kendraId: "PMBJK-APP-99",
-    kendraName: "Jan Aushadhi Kendra - Rohini Sector 7",
-    phone: "+91 98112 33445",
-    status: "pending", // Pending approval demo!
-  },
-  {
-    id: "usr-customer-1",
-    name: "Ramesh Sharma",
-    email: "ramesh.sharma@gmail.com",
-    role: "customer",
-    phone: "+91 98765 43210",
-    address: "B-402, Green Glen Residences, Bellandur, Bengaluru, Karnataka - 560103",
-    status: "active",
-  },
-];
+const ORDER_STATUSES = ["placed", "confirmed", "ready", "completed", "cancelled"];
 
-// -----------------------------------------------------------------------------
-// Seeded Kendra Applications (for Admin review)
-// -----------------------------------------------------------------------------
-const INITIAL_APPLICATIONS = [
-  {
-    id: "app-101",
-    kendraCode: "PMBJK09101",
-    name: "Jan Aushadhi Kendra - Rohini Sector 7",
-    ownerName: "Anita Saxena",
-    email: "anita.kendra@pmbjp.in",
-    phone: "+91 98112 33445",
-    address: "Shop No. 12, DDA Community Centre, Sector 7, Rohini",
-    city: "New Delhi",
-    district: "North West Delhi",
-    state: "Delhi",
-    pincode: "110085",
-    licenseNumber: "DL-PMBJP-2026-90412",
-    operatingHours: "08:30 AM - 09:30 PM",
-    location: { lat: 28.7159, lng: 77.1147 },
-    status: "pending",
-    submittedAt: new Date(Date.now() - 3600000 * 18).toISOString(),
-    initialProductsCount: 15,
-  },
-  {
-    id: "app-102",
-    kendraCode: "PMBJK09102",
-    name: "Jan Aushadhi Kendra - Salt Lake Sector V",
-    ownerName: "Debashis Mukherjee",
-    email: "debashis.pharma@gmail.com",
-    phone: "+91 98300 77112",
-    address: "Block EP & GP, Sector V, Bidhannagar, Salt Lake",
-    city: "Kolkata",
-    district: "North 24 Parganas",
-    state: "West Bengal",
-    pincode: "700091",
-    licenseNumber: "WB-PMBJP-2026-44120",
-    operatingHours: "09:00 AM - 09:00 PM",
-    location: { lat: 22.5804, lng: 88.4378 },
-    status: "pending",
-    submittedAt: new Date(Date.now() - 3600000 * 36).toISOString(),
-    initialProductsCount: 12,
-  },
-];
+function asPlain(doc) {
+  if (!doc) return null;
+  if (typeof doc.toJSON === "function") return doc.toJSON();
+  return { ...doc, id: doc._id ? String(doc._id) : doc.id };
+}
 
-// -----------------------------------------------------------------------------
-// Seeded Orders
-// -----------------------------------------------------------------------------
-const INITIAL_ORDERS = [
-  {
-    id: "ORD-9401",
-    customerName: "Ramesh Sharma",
-    customerEmail: "ramesh.sharma@gmail.com",
-    customerPhone: "+91 98765 43210",
-    deliveryAddress: "B-402, Green Glen Residences, Bellandur, Bengaluru, Karnataka - 560103",
-    deliveryType: "delivery",
-    kendraId: "PMBJK03001",
-    kendraName: "Jan Aushadhi Kendra - Victoria Hospital Campus",
-    items: [
-      {
-        medicineId: "med-001",
-        genericName: "Paracetamol 650mg Tablets",
-        packSize: "10 Tablets",
-        genericMrp: 11.50,
-        quantity: 3,
-        totalPrice: 34.50,
-      },
-      {
-        medicineId: "med-005",
-        genericName: "Pantoprazole 40mg Gastro-Resistant Tablets",
-        packSize: "10 Tablets",
-        genericMrp: 14.50,
-        quantity: 2,
-        totalPrice: 29.00,
-      },
-    ],
-    totalAmount: 63.50,
-    status: "confirmed", // placed -> confirmed -> ready -> completed
-    paymentMethod: "Cash / UPI on Delivery",
-    notes: "Please call upon arrival at gate.",
-    createdAt: new Date(Date.now() - 3600000 * 5).toISOString(),
-    statusHistory: [
-      { status: "placed", timestamp: new Date(Date.now() - 3600000 * 5).toISOString() },
-      { status: "confirmed", timestamp: new Date(Date.now() - 3600000 * 4).toISOString() },
-    ],
-  },
-  {
-    id: "ORD-9402",
-    customerName: "Priya Nair",
-    customerEmail: "priya.nair@example.com",
-    customerPhone: "+91 98230 99881",
-    deliveryAddress: "Counter Pickup at Kendra",
-    deliveryType: "pickup",
-    kendraId: "PMBJK02001",
-    kendraName: "Jan Aushadhi Kendra - KEM Hospital Parel",
-    items: [
-      {
-        medicineId: "med-002",
-        genericName: "Atorvastatin 10mg Tablets",
-        packSize: "10 Tablets",
-        genericMrp: 9.80,
-        quantity: 4,
-        totalPrice: 39.20,
-      },
-    ],
-    totalAmount: 39.20,
-    status: "ready",
-    paymentMethod: "UPI at Kendra Counter",
-    notes: "Prescription copy will be shown at counter.",
-    createdAt: new Date(Date.now() - 3600000 * 2).toISOString(),
-    statusHistory: [
-      { status: "placed", timestamp: new Date(Date.now() - 3600000 * 2).toISOString() },
-      { status: "confirmed", timestamp: new Date(Date.now() - 3600000 * 1.5).toISOString() },
-      { status: "ready", timestamp: new Date(Date.now() - 3600000 * 0.5).toISOString() },
-    ],
-  },
-];
+function mapApplication(doc) {
+  const app = asPlain(doc);
+  return { ...app, id: String(app._id || app.id) };
+}
 
-// -----------------------------------------------------------------------------
-// Seeded Stock Alert Requests
-// -----------------------------------------------------------------------------
-const INITIAL_STOCK_ALERTS = [
-  {
-    id: "alt-801",
-    customerName: "Ramesh Sharma",
-    customerEmail: "ramesh.sharma@gmail.com",
-    customerPhone: "+91 98765 43210",
-    medicineId: "med-004",
-    medicineName: "Azithromycin 500mg Tablets",
-    kendraId: "PMBJK01002",
-    kendraName: "Jan Aushadhi Kendra - Connaught Place",
-    status: "pending", // pending -> notified
-    createdAt: new Date(Date.now() - 3600000 * 12).toISOString(),
-    notificationMessage: null,
-    notifiedAt: null,
-  },
-];
+function mapOrder(doc) {
+  const order = asPlain(doc);
+  return { ...order, id: order.orderNumber || order.id };
+}
 
 class DashboardService {
-  constructor() {
-    this.users = [...INITIAL_USERS];
-    this.applications = [...INITIAL_APPLICATIONS];
-    this.orders = [...INITIAL_ORDERS];
-    this.stockAlerts = [...INITIAL_STOCK_ALERTS];
-    this.orderCounter = 9403;
-  }
-
   // =========================================================================
-  // Auth & Roles
+  // Admin operations
   // =========================================================================
 
-  getDemoUsers() {
-    return this.users.map(({ id, name, email, role, kendraId, kendraName, designation, phone, address, status }) => ({
-      id,
-      name,
-      email,
-      role,
-      kendraId,
-      kendraName,
-      designation,
-      phone,
-      address,
-      status,
-    }));
-  }
+  async getAdminStats() {
+    const [
+      totalKendras,
+      pendingApplications,
+      orders,
+      totalMedicines,
+      activeStockAlerts,
+      totalCustomers,
+      totalOwners,
+      pendingOwners,
+      approvedOwners,
+    ] = await Promise.all([
+      Kendra.countDocuments({ status: "active" }),
+      KendraApplication.countDocuments({ status: "pending" }),
+      Order.find({}).lean(),
+      Medicine.countDocuments(),
+      StockAlert.countDocuments({ status: "pending" }),
+      User.countDocuments({ role: "customer" }),
+      User.countDocuments({ role: "kendra_owner" }),
+      User.countDocuments({ role: "kendra_owner", status: "pending" }),
+      User.countDocuments({ role: "kendra_owner", status: "approved" }),
+    ]);
 
-  getUserByEmail(email) {
-    return this.users.find((u) => u.email.toLowerCase() === (email || "").trim().toLowerCase());
-  }
+    const totalRevenue = orders.reduce((sum, order) => sum + (order.totalAmount || 0), 0);
+    const completedOrders = orders.filter((order) => order.status === "completed").length;
 
-  registerUser(userData) {
-    const { name, email, role = "customer", phone, address, kendraId, kendraName } = userData;
-    const existing = this.getUserByEmail(email);
-    if (existing) {
-      return { user: existing, alreadyExisted: true };
-    }
+    const medicines = await Medicine.find(
+      {},
+      { id: 1, genericMrp: 1, brandedEquivalents: 1 }
+    ).lean();
+    const medicineById = new Map(medicines.map((med) => [med.id, med]));
 
-    const newUser = {
-      id: `usr-${Date.now()}`,
-      name: name.trim(),
-      email: email.trim().toLowerCase(),
-      role,
-      phone: phone ? phone.trim() : "",
-      address: address ? address.trim() : "",
-      kendraId: kendraId || null,
-      kendraName: kendraName || null,
-      status: role === "kendra_owner" ? "pending" : "active",
-      createdAt: new Date().toISOString(),
-    };
-
-    this.users.push(newUser);
-    return { user: newUser, alreadyExisted: false };
-  }
-
-  // =========================================================================
-  // Admin Operations
-  // =========================================================================
-
-  getAdminStats() {
-    const totalKendras = uhiGatewayService.stores.length;
-    const pendingApplications = this.applications.filter((a) => a.status === "pending").length;
-    const totalOrders = this.orders.length;
-    const completedOrders = this.orders.filter((o) => o.status === "completed").length;
-    const totalRevenue = this.orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
-    const totalMedicines = uhiGatewayService.medicines.length;
-
-    // Estimate network citizen savings
-    const estimatedSavings = this.orders.reduce((sum, o) => {
-      const orderSavings = o.items.reduce((iSum, item) => {
-        const med = uhiGatewayService.getMedicineById(item.medicineId);
-        if (med && med.cheapestBrandedMrp) {
-          return iSum + (med.cheapestBrandedMrp - item.genericMrp) * item.quantity;
+    const estimatedSavings = orders.reduce((sum, order) => {
+      const orderSavings = (order.items || []).reduce((itemSum, item) => {
+        const med = medicineById.get(item.medicineId);
+        const cheapestBranded =
+          med && med.brandedEquivalents && med.brandedEquivalents.length > 0
+            ? Math.min(...med.brandedEquivalents.map((brand) => brand.mrp))
+            : null;
+        if (cheapestBranded) {
+          return itemSum + Math.max(0, cheapestBranded - item.genericMrp) * item.quantity;
         }
-        return iSum + item.genericMrp * item.quantity * 2; // ~65% savings default
+        return itemSum + item.genericMrp * item.quantity * 2;
       }, 0);
       return sum + orderSavings;
     }, 0);
@@ -286,213 +93,372 @@ class DashboardService {
     return {
       totalKendras,
       pendingApplications,
-      totalOrders,
+      totalOrders: orders.length,
       completedOrders,
       totalRevenue: Number(totalRevenue.toFixed(2)),
       estimatedSavings: Number(estimatedSavings.toFixed(2)),
       totalMedicines,
-      activeStockAlerts: this.stockAlerts.filter((a) => a.status === "pending").length,
+      activeStockAlerts,
+      totalCustomers,
+      totalOwners,
+      pendingOwners,
+      approvedOwners,
     };
   }
 
-  listKendraApplications(statusFilter) {
-    if (statusFilter && statusFilter !== "all") {
-      return this.applications.filter((a) => a.status === statusFilter);
+  async listUsers(role = "all") {
+    const query = ["customer", "kendra_owner"].includes(role) ? { role } : {};
+    const users = await User.find(query).sort({ role: 1, createdAt: -1 }).lean();
+    return users.map((user) => ({
+      id: String(user._id),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+      phone: user.phone || "",
+      address: user.address || "",
+      emailVerified: Boolean(user.emailVerified),
+      kendraCode: user.kendraCode || null,
+      kendraName: user.kendraName || null,
+      rejectionReason: user.rejectionReason || "",
+      createdAt: user.createdAt,
+      lastLoginAt: user.lastLoginAt || null,
+    }));
+  }
+
+  /**
+   * Permanently removes an account. For Kendra owners this also removes the
+   * approved/pending shop, its inventory and its application records so the
+   * Kendra disappears from the customer-facing network immediately.
+   */
+  async deleteUser(userId) {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    const kendraCodes = new Set();
+    if (user.kendraCode) kendraCodes.add(user.kendraCode);
+
+    const applications = await KendraApplication.find({
+      $or: [{ ownerUserId: user._id }, { email: user.email }],
+    }).lean();
+    applications.forEach((application) => kendraCodes.add(application.kendraCode));
+
+    const ownedKendras = await Kendra.find({
+      $or: [{ ownerUserId: user._id }, { kendraCode: { $in: [...kendraCodes] } }],
+    })
+      .select("kendraCode")
+      .lean();
+    ownedKendras.forEach((kendra) => kendraCodes.add(kendra.kendraCode));
+
+    const codes = [...kendraCodes];
+
+    await Promise.all([
+      KendraApplication.deleteMany({
+        $or: [{ ownerUserId: user._id }, { email: user.email }],
+      }),
+      Kendra.deleteMany({
+        $or: [{ ownerUserId: user._id }, { kendraCode: { $in: codes } }],
+      }),
+      codes.length > 0 ? Inventory.deleteMany({ kendraCode: { $in: codes } }) : null,
+      codes.length > 0 ? StockAlert.deleteMany({ kendraCode: { $in: codes } }) : null,
+      StockAlert.deleteMany({ customerUserId: user._id }),
+    ]);
+
+    await User.deleteOne({ _id: user._id });
+
+    return {
+      id: String(user._id),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      removedKendraCodes: codes,
+    };
+  }
+
+  async listKendraApplications(statusFilter) {
+    const query = {};
+    if (statusFilter && statusFilter !== "all" && statusFilter !== "awaiting_verification") {
+      query.status = statusFilter;
+    } else if (!statusFilter || statusFilter === "all") {
+      // Hide unverified applications from the admin queue by default.
+      query.status = { $ne: "awaiting_verification" };
     }
-    return this.applications;
+
+    const applications = await KendraApplication.find(query)
+      .sort({ submittedAt: -1, createdAt: -1 })
+      .lean();
+
+    return applications.map(mapApplication);
   }
 
-  approveKendraApplication(appId) {
-    const app = this.applications.find((a) => a.id === appId);
-    if (!app) throw new Error("Application not found");
-    if (app.status === "approved") throw new Error("Application is already approved");
+  async approveKendraApplication(appId) {
+    const application = await KendraApplication.findById(appId);
+    if (!application) throw new Error("Application not found");
+    if (application.status === "approved") throw new Error("Application is already approved");
+    if (application.status === "rejected") {
+      throw new Error("This application was already rejected");
+    }
+    if (application.status === "awaiting_verification") {
+      throw new Error("The owner has not verified their email address yet");
+    }
 
-    app.status = "approved";
-    app.approvedAt = new Date().toISOString();
-
-    // Register into live ABDM Kendra Stores registry so customers can immediately find it!
-    const newStore = {
-      id: app.kendraCode || `PMBJK${Math.floor(10000 + Math.random() * 90000)}`,
-      name: app.name,
-      address: app.address,
-      city: app.city,
-      district: app.district,
-      state: app.state,
-      pincode: app.pincode,
-      phone: app.phone,
-      email: app.email,
-      operatingHours: app.operatingHours || "08:30 AM - 09:00 PM",
-      location: app.location || { lat: 28.6139, lng: 77.2090 },
-      // Initialize full medicine catalog in stock for this newly approved Kendra
-      inventory: {},
+    const kendraPayload = {
+      kendraCode: application.kendraCode,
+      name: application.name,
+      ownerUserId: application.ownerUserId,
+      ownerName: application.ownerName,
+      address: application.address,
+      city: application.city,
+      district: application.district,
+      state: application.state,
+      pincode: application.pincode,
+      phone: application.phone,
+      email: application.email,
+      licenseNumber: application.licenseNumber,
+      operatingHours: application.operatingHours,
+      location: application.location,
+      status: "active",
     };
 
-    uhiGatewayService.medicines.forEach((m) => {
-      newStore.inventory[m.id] = {
-        inStock: true,
-        units: 50, // Initial approved stock
-      };
+    const store = await Kendra.findOneAndUpdate(
+      { kendraCode: application.kendraCode },
+      { $set: kendraPayload },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    // Commit the decision first. Optional work (inventory seed / email) must
+    // never leave the admin button stuck if it fails.
+    application.status = "approved";
+    application.reviewedAt = new Date();
+    application.rejectionReason = "";
+    await application.save();
+
+    try {
+      if (application.ownerUserId) {
+        await updateOwnerById(application, "approved", store);
+      } else {
+        await updateOwnerByEmail(application, "approved", store);
+      }
+    } catch (err) {
+      console.warn("[approval] owner account update failed:", err.message);
+    }
+
+    try {
+      await this.seedKendraInventory(application.kendraCode);
+    } catch (err) {
+      console.warn("[approval] inventory seed failed:", err.message);
+    }
+
+    queueDecisionEmail({
+      to: application.email,
+      name: application.ownerName,
+      kendraName: application.name,
+      approved: true,
     });
 
-    // Check if store already in list
-    const existingIdx = uhiGatewayService.stores.findIndex((s) => s.id === newStore.id);
-    if (existingIdx >= 0) {
-      uhiGatewayService.stores[existingIdx] = newStore;
-    } else {
-      uhiGatewayService.stores.unshift(newStore);
-    }
-
-    // Update user record if exists
-    const user = this.users.find((u) => u.email.toLowerCase() === app.email.toLowerCase());
-    if (user) {
-      user.status = "approved";
-      user.kendraId = newStore.id;
-      user.kendraName = newStore.name;
-    }
-
-    return { application: app, store: newStore };
+    return { application: mapApplication(application), store: asPlain(store) };
   }
 
-  rejectKendraApplication(appId, reason = "Incomplete license documentation") {
-    const app = this.applications.find((a) => a.id === appId);
-    if (!app) throw new Error("Application not found");
-    app.status = "rejected";
-    app.rejectionReason = reason;
-    app.rejectedAt = new Date().toISOString();
-
-    const user = this.users.find((u) => u.email.toLowerCase() === app.email.toLowerCase());
-    if (user) {
-      user.status = "rejected";
+  async rejectKendraApplication(appId, reason = "Incomplete license documentation") {
+    const application = await KendraApplication.findById(appId);
+    if (!application) throw new Error("Application not found");
+    if (application.status === "approved") {
+      throw new Error("An approved Kendra cannot be rejected. Delete the owner account instead.");
     }
 
-    return app;
+    const rejectionReason = String(reason || "").trim() || "Incomplete license documentation";
+    application.status = "rejected";
+    application.rejectionReason = rejectionReason;
+    application.reviewedAt = new Date();
+    await application.save();
+
+    try {
+      if (application.ownerUserId) {
+        await updateOwnerById(application, "rejected", null, rejectionReason);
+      } else {
+        await updateOwnerByEmail(application, "rejected", null, rejectionReason);
+      }
+    } catch (err) {
+      console.warn("[rejection] owner account update failed:", err.message);
+    }
+
+    queueDecisionEmail({
+      to: application.email,
+      name: application.ownerName,
+      kendraName: application.name,
+      approved: false,
+      reason: rejectionReason,
+    });
+
+    return mapApplication(application);
+  }
+
+  /**
+   * Creates an inventory row for every catalog medicine for a newly approved
+   * Kendra. Uses the stable public medicine id and tolerates legacy catalog
+   * documents that were created without an `id` field.
+   */
+  async seedKendraInventory(kendraCode) {
+    const medicines = await Medicine.find({}).lean();
+    if (medicines.length === 0) return 0;
+
+    const operations = medicines
+      .map((med) => {
+        const medicineId = publicMedicineId(med);
+        if (!medicineId) return null;
+        return {
+          updateOne: {
+            filter: { kendraCode, medicineId },
+            update: {
+              $setOnInsert: {
+                kendraCode,
+                medicineId,
+                inStock: true,
+                units: 50,
+                price: Number.isFinite(Number(med.genericMrp)) ? Number(med.genericMrp) : null,
+                batchNumber: `BAT-${medicineId.replace(/[^a-zA-Z0-9]/g, "").slice(-4).toUpperCase()}-2026`,
+                expiryDate: "12/2027",
+              },
+            },
+            upsert: true,
+          },
+        };
+      })
+      .filter(Boolean);
+
+    if (operations.length === 0) return 0;
+    await Inventory.bulkWrite(operations, { ordered: false });
+    return operations.length;
+  }
+
+  async getAllOrders() {
+    const orders = await Order.find({}).sort({ createdAt: -1 });
+    return orders.map(mapOrder);
   }
 
   // =========================================================================
-  // Kendra Owner Operations
+  // Kendra owner operations
   // =========================================================================
 
-  submitKendraRegistration(formData) {
-    const {
-      kendraName,
-      ownerName,
-      email,
-      phone,
-      address,
-      city,
-      district,
-      state,
-      pincode,
-      licenseNumber,
-      operatingHours,
-      lat,
-      lng,
-      initialProducts,
-    } = formData;
+  async getKendraInventory(kendraCode) {
+    const store = await Kendra.findOne({ kendraCode }).lean();
+    if (!store) return { store: null, items: [], categories: [] };
 
-    const kendraCode = `PMBJK${Math.floor(10000 + Math.random() * 89999)}`;
-    const newApp = {
-      id: `app-${Date.now()}`,
-      kendraCode,
-      name: kendraName.trim(),
-      ownerName: ownerName.trim(),
-      email: email.trim().toLowerCase(),
-      phone: phone.trim(),
-      address: address.trim(),
-      city: city.trim(),
-      district: district ? district.trim() : city.trim(),
-      state: state.trim(),
-      pincode: pincode ? pincode.trim() : "",
-      licenseNumber: licenseNumber ? licenseNumber.trim() : `LIC-${Date.now()}`,
-      operatingHours: operatingHours || "08:30 AM - 09:00 PM (All 7 Days)",
-      location: {
-        lat: lat ? parseFloat(lat) : 28.6139,
-        lng: lng ? parseFloat(lng) : 77.2090,
-      },
-      status: "pending",
-      submittedAt: new Date().toISOString(),
-      initialProductsCount: Array.isArray(initialProducts) ? initialProducts.length : uhiGatewayService.medicines.length,
-    };
+    const [medicines, stockRows, categories] = await Promise.all([
+      Medicine.find({}).sort({ genericName: 1 }).lean(),
+      Inventory.find({ kendraCode }).lean(),
+      Medicine.distinct("category"),
+    ]);
+    const stockByMedicine = new Map(stockRows.map((row) => [row.medicineId, row]));
 
-    this.applications.unshift(newApp);
-
-    // Also register or update user profile
-    this.registerUser({
-      name: ownerName,
-      email,
-      role: "kendra_owner",
-      phone,
-      address,
-      kendraId: kendraCode,
-      kendraName,
-    });
-
-    return newApp;
-  }
-
-  getKendraInventory(kendraId) {
-    const store = uhiGatewayService.stores.find((s) => s.id === kendraId);
-    if (!store) {
-      // Return empty inventory placeholder if store not yet approved
-      return { store: null, items: [] };
-    }
-
-    const items = uhiGatewayService.medicines.map((med) => {
-      const stock = store.inventory[med.id] || { inStock: false, units: 0 };
+    const items = medicines.map((med) => {
+      const medicineId = publicMedicineId(med);
+      const stock = stockByMedicine.get(medicineId) || {};
+      const basePrice = Number(med.genericMrp) || 0;
+      const price =
+        Number.isFinite(Number(stock.price)) && Number(stock.price) > 0
+          ? Number(stock.price)
+          : basePrice;
+      const units = Number(stock.units) || 0;
+      const inStock = Boolean(stock.inStock && units > 0);
       return {
-        medicineId: med.id,
+        medicineId,
         drugCode: med.drugCode,
         genericName: med.genericName,
         composition: med.composition,
-        category: med.category,
+        category: med.category || "General",
         packSize: med.packSize,
-        genericMrp: med.genericMrp,
-        prescriptionRequired: med.prescriptionRequired,
-        inStock: stock.inStock,
-        units: stock.units,
-        batchNumber: stock.batchNumber || `BAT-${med.drugCode.slice(-3)}-2026`,
+        basePrice,
+        price,
+        genericMrp: price,
+        prescriptionRequired: Boolean(med.prescriptionRequired),
+        inStock,
+        stockStatus: !inStock ? "Out of Stock" : units <= 20 ? "Low Stock" : "In Stock",
+        isLowStock: inStock && units <= 20,
+        units,
+        batchNumber: stock.batchNumber || `BAT-${String(med.drugCode || "").slice(-3)}-2026`,
         expiryDate: stock.expiryDate || "12/2027",
       };
     });
 
-    return { store, items };
+    return {
+      store: asPlain(store),
+      items,
+      categories: categories.filter(Boolean).sort((a, b) => a.localeCompare(b)),
+    };
   }
 
-  updateKendraStock(kendraId, medicineId, { units, inStock, batchNumber, expiryDate }) {
-    const store = uhiGatewayService.stores.find((s) => s.id === kendraId);
+  async updateKendraStock(
+    kendraCode,
+    medicineId,
+    { units, inStock, batchNumber, expiryDate, price, genericMrp }
+  ) {
+    const store = await Kendra.findOne({ kendraCode }).lean();
     if (!store) throw new Error("Kendra store not found");
 
-    if (!store.inventory) store.inventory = {};
+    const medicine = await uhiGatewayService.getMedicineById(medicineId);
+    if (!medicine) throw new Error("Medicine not found");
+
+    const existing = await Inventory.findOne({ kendraCode, medicineId });
+    const wasOutOfStock =
+      !existing || !existing.inStock || !existing.units || existing.units === 0;
 
     const numUnits = parseInt(units, 10);
-    const wasOutOfStock = !store.inventory[medicineId] || !store.inventory[medicineId].inStock || store.inventory[medicineId].units === 0;
+    const nextUnits = Number.isNaN(numUnits) ? Number(existing?.units) || 0 : Math.max(0, numUnits);
+    const nextInStock = inStock !== undefined ? Boolean(inStock) : nextUnits > 0;
 
-    store.inventory[medicineId] = {
-      inStock: inStock !== undefined ? inStock : numUnits > 0,
-      units: isNaN(numUnits) ? 0 : Math.max(0, numUnits),
-      batchNumber: batchNumber || store.inventory[medicineId]?.batchNumber || "BAT-2026",
-      expiryDate: expiryDate || store.inventory[medicineId]?.expiryDate || "12/2027",
-      lastUpdated: new Date().toISOString(),
+    const requestedPrice = price !== undefined && price !== null && price !== "" ? price : genericMrp;
+    let nextPrice = existing?.price;
+    if (requestedPrice !== undefined && requestedPrice !== null && requestedPrice !== "") {
+      const parsedPrice = Number(requestedPrice);
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        throw new Error("A selling price greater than zero is required");
+      }
+      nextPrice = Number(parsedPrice.toFixed(2));
+    }
+
+    const setFields = {
+      inStock: nextInStock && nextUnits > 0,
+      units: nextUnits,
+      batchNumber: batchNumber || existing?.batchNumber || "BAT-2026",
+      expiryDate: expiryDate || existing?.expiryDate || "12/2027",
+      lastUpdated: new Date(),
     };
+    if (nextPrice !== undefined && nextPrice !== null) {
+      setFields.price = Number(Number(nextPrice).toFixed(2));
+    }
 
-    const isNowInStock = store.inventory[medicineId].inStock && store.inventory[medicineId].units > 0;
+    const stock = await Inventory.findOneAndUpdate(
+      { kendraCode, medicineId },
+      { $set: setFields },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
 
-    // Trigger stock alert notifications if it transitioned to in-stock!
+    const isNowInStock = stock.inStock && stock.units > 0;
     let triggeredAlerts = 0;
     if (wasOutOfStock && isNowInStock) {
-      triggeredAlerts = this.notifyWaitingCustomers(kendraId, medicineId, store.name, store.inventory[medicineId].units);
+      triggeredAlerts = await this.notifyWaitingCustomers(
+        kendraCode,
+        medicineId,
+        store.name,
+        stock.units
+      );
     }
 
     return {
-      kendraId,
+      kendraCode,
       medicineId,
-      stock: store.inventory[medicineId],
+      price:
+        Number.isFinite(Number(stock.price)) && Number(stock.price) > 0
+          ? Number(stock.price)
+          : Number(medicine.genericMrp),
+      stock: stock.toJSON(),
       triggeredAlerts,
     };
   }
 
-  addMedicineToKendra(kendraId, medicineData) {
-    const store = uhiGatewayService.stores.find((s) => s.id === kendraId);
+  async addMedicineToKendra(kendraCode, medicineData) {
+    const store = await Kendra.findOne({ kendraCode }).lean();
     if (!store) throw new Error("Kendra store not found");
 
     const {
@@ -502,58 +468,251 @@ class DashboardService {
       packSize,
       genericMrp,
       units = 50,
+      price,
       brandedEquivalents = [],
     } = medicineData;
 
-    const drugCode = `PMBJP-${Math.floor(100 + Math.random() * 900)}`;
-    const newMedId = `med-${Date.now()}`;
+    const cleanName = String(genericName || "").trim();
+    if (!cleanName) throw new Error("Generic medicine name is required");
 
-    const newMed = {
-      id: newMedId,
-      drugCode,
-      genericName: genericName.trim(),
-      composition: composition ? composition.trim() : genericName.trim(),
-      category: category ? category.trim() : "General",
-      packSize: packSize ? packSize.trim() : "10 Tablets",
-      genericMrp: parseFloat(genericMrp) || 15.00,
-      prescriptionRequired: false,
-      brandedEquivalents: brandedEquivalents || [],
-      purchaseInfo: {
-        unitPrice: (parseFloat(genericMrp) || 15.00) / 10,
-        packMrp: parseFloat(genericMrp) || 15.00,
-        packSize: packSize || "10 Tablets",
-        currency: "INR",
-        subsidyScheme: "Pradhan Mantri Bhartiya Janaushadhi Pariyojana (PMBJP)",
-        purchaseAvailability: "Available at PMBJP Kendras",
+    const mrp = parseFloat(genericMrp);
+    if (!Number.isFinite(mrp) || mrp <= 0) {
+      throw new Error("A valid subsidized MRP is required");
+    }
+
+    const pack = packSize ? String(packSize).trim() : "10 Tablets";
+    const cleanCategory = category ? String(category).trim() : "General";
+
+    // Re-use an existing catalog row when the owner adds the same formulation
+    // and pack size again; it should only become a stock update, not a
+    // duplicate medicine entry.
+    let medicineDoc = await Medicine.findOne({
+      genericName: new RegExp(`^${escapeRegex(cleanName)}$`, "i"),
+      packSize: new RegExp(`^${escapeRegex(pack)}$`, "i"),
+    });
+    const isNewMedicine = !medicineDoc;
+
+    if (!medicineDoc) {
+      const id = `med-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const drugCode = `PMBJP-${String(Date.now()).slice(-6)}-${Math.floor(
+        100 + Math.random() * 900
+      )}`;
+
+      const cleanEquivalents = Array.isArray(brandedEquivalents)
+        ? brandedEquivalents
+            .filter((brand) => brand && String(brand.brandName || "").trim())
+            .map((brand) => ({
+              brandName: String(brand.brandName).trim(),
+              manufacturer: brand.manufacturer ? String(brand.manufacturer).trim() : "",
+              mrp: Number(brand.mrp) || 0,
+            }))
+            .filter((brand) => brand.mrp > 0)
+        : [];
+
+      medicineDoc = await Medicine.create({
+        id,
+        drugCode,
+        genericName: cleanName,
+        composition: composition ? String(composition).trim() : cleanName,
+        category: cleanCategory || "General",
+        packSize: pack,
+        genericMrp: mrp,
+        prescriptionRequired: false,
+        purchaseInfo: {
+          unitPrice: Number((mrp / 10).toFixed(2)),
+          packMrp: mrp,
+          packSize: pack,
+          currency: "INR",
+          subsidyScheme: "Pradhan Mantri Bhartiya Janaushadhi Pariyojana (PMBJP)",
+          prescriptionRequired: false,
+          purchaseAvailability: "Available at PMBJP Kendras",
+        },
+        brandedEquivalents: cleanEquivalents,
+        searchKeywords: [
+          cleanName.toLowerCase(),
+          cleanCategory.toLowerCase(),
+          drugCode.toLowerCase(),
+        ],
+      });
+    }
+
+    const medicineId = publicMedicineId(medicineDoc);
+    if (!medicineId) throw new Error("Could not determine a medicine identifier");
+
+    // Legacy catalog documents may not have a public `id`; persist one so
+    // inventory and customer lookups stay stable.
+    if (!medicineDoc.id) {
+      medicineDoc.id = medicineId;
+      await medicineDoc.save();
+    }
+
+    const parsedPrice = price !== undefined && price !== null && price !== "" ? Number(price) : mrp;
+    if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      throw new Error("A valid selling price greater than zero is required");
+    }
+
+    const nextUnits = Math.max(0, parseInt(units, 10) || 0);
+    const previousStock = await Inventory.findOne({ kendraCode, medicineId }).lean();
+    const wasOutOfStock =
+      !previousStock ||
+      !previousStock.inStock ||
+      !previousStock.units ||
+      previousStock.units === 0;
+
+    const stock = await Inventory.findOneAndUpdate(
+      { kendraCode, medicineId },
+      {
+        $set: {
+          inStock: nextUnits > 0,
+          units: nextUnits,
+          price: Number(parsedPrice.toFixed(2)),
+          batchNumber: `BAT-${String(medicineDoc.drugCode || medicineId).slice(-6)}`,
+          expiryDate: "12/2027",
+          lastUpdated: new Date(),
+        },
       },
-      searchKeywords: [genericName.toLowerCase(), drugCode.toLowerCase()],
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+
+    let triggeredAlerts = 0;
+    if (wasOutOfStock && stock.inStock && stock.units > 0) {
+      triggeredAlerts = await this.notifyWaitingCustomers(
+        kendraCode,
+        medicineId,
+        store.name,
+        stock.units
+      );
+    }
+
+    return {
+      medicine: uhiGatewayService.enrichMedicine(medicineDoc.toJSON()),
+      stock: stock.toJSON(),
+      isNewMedicine,
+      triggeredAlerts,
     };
+  }
 
-    // Add to global catalog
-    uhiGatewayService.medicines.unshift(newMed);
-
-    // Add to this Kendra's inventory
-    store.inventory[newMedId] = {
-      inStock: true,
-      units: parseInt(units, 10) || 50,
-      batchNumber: `BAT-${drugCode}`,
-      expiryDate: "12/2027",
-    };
-
-    return { medicine: newMed, stock: store.inventory[newMedId] };
+  async getKendraOrders(kendraCode) {
+    const orders = await Order.find({ kendraCode }).sort({ createdAt: -1 });
+    return orders.map(mapOrder);
   }
 
   // =========================================================================
-  // Order Online Workflow (Customer & Kendra Owner)
+  // Customer operations
   // =========================================================================
 
-  createOrder(orderData) {
+  /**
+   * Prices a cart at one Kendra, or compares every active Kendra and returns
+   * the cheapest one that can actually fulfil the basket. The customer UI uses
+   * this to show the "best price" option and to switch fulfilling Kendra.
+   */
+  async quoteOrder({ kendraCode, items = [] } = {}) {
+    if (!Array.isArray(items) || items.length === 0) {
+      throw new Error("Cart is empty");
+    }
+
+    const requestedById = new Map();
+    for (const item of items) {
+      const med = await uhiGatewayService.getMedicineById(item.medicineId);
+      if (!med) throw new Error(`Medicine ${item.medicineId} not found in catalog`);
+      const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+      const existing = requestedById.get(med.id);
+      if (existing) existing.quantity += quantity;
+      else requestedById.set(med.id, { med, quantity });
+    }
+    const requested = [...requestedById.values()];
+
+    // Always compare every active Kendra so the customer can be told about a
+    // cheaper option even when one Kendra is already selected.
+    const stores = await Kendra.find({ status: "active" }).lean();
+    if (stores.length === 0) {
+      throw new Error("No active Jan Aushadhi Kendra is available to fulfil this order");
+    }
+
+    const requestedCode = kendraCode ? String(kendraCode).trim() : "";
+    if (requestedCode && !stores.some((store) => store.kendraCode === requestedCode)) {
+      throw new Error("Selected Jan Aushadhi Kendra not found or inactive");
+    }
+
+    const medicineIds = [...new Set(requested.map(({ med }) => med.id))];
+    const stockRows = await Inventory.find({
+      kendraCode: { $in: stores.map((store) => store.kendraCode) },
+      medicineId: { $in: medicineIds },
+    }).lean();
+    const stockMap = new Map(
+      stockRows.map((row) => [`${row.kendraCode}::${row.medicineId}`, row])
+    );
+
+    const buildQuote = (store) => {
+      let totalAmount = 0;
+      let canFulfill = true;
+
+      const quoteItems = requested.map(({ med, quantity }) => {
+        const stock = stockMap.get(`${store.kendraCode}::${med.id}`);
+        const availableUnits = stock && stock.inStock ? Number(stock.units) || 0 : 0;
+        const available = Boolean(stock && stock.inStock && availableUnits >= quantity);
+        if (!available) canFulfill = false;
+
+        const unitPrice = resolveInventoryPrice(stock, med);
+        const lineTotal = Number((unitPrice * quantity).toFixed(2));
+        totalAmount += lineTotal;
+
+        return {
+          medicineId: med.id,
+          genericName: med.genericName,
+          packSize: med.packSize,
+          quantity,
+          unitPrice,
+          totalPrice: lineTotal,
+          available,
+          availableUnits,
+        };
+      });
+
+      return {
+        kendraCode: store.kendraCode,
+        kendraName: store.name,
+        city: store.city,
+        canFulfill,
+        totalAmount: Number(totalAmount.toFixed(2)),
+        items: quoteItems,
+      };
+    };
+
+    const quotes = stores.map(buildQuote);
+    const fulfillingQuotes = quotes.filter((quote) => quote.canFulfill);
+    const candidates = fulfillingQuotes.length > 0 ? fulfillingQuotes : quotes;
+    const best = candidates.reduce((lowest, quote) =>
+      quote.totalAmount < lowest.totalAmount ? quote : lowest
+    );
+    const selected = requestedCode
+      ? quotes.find((quote) => quote.kendraCode === requestedCode) || best
+      : best;
+
+    return {
+      selected,
+      best,
+      options: quotes
+        .map((quote) => ({
+          kendraCode: quote.kendraCode,
+          kendraName: quote.kendraName,
+          city: quote.city,
+          canFulfill: quote.canFulfill,
+          totalAmount: quote.totalAmount,
+        }))
+        .sort((a, b) => a.totalAmount - b.totalAmount),
+    };
+  }
+
+  async createOrder(orderData) {
     const {
       customerName,
       customerEmail,
       customerPhone,
+      customerUserId,
       deliveryAddress,
       deliveryType = "delivery",
+      kendraCode,
       kendraId,
       items = [],
       paymentMethod = "Cash / UPI on Delivery",
@@ -564,185 +723,268 @@ class DashboardService {
       throw new Error("Order must contain at least one medicine item");
     }
 
-    const store = uhiGatewayService.stores.find((s) => s.id === kendraId);
-    if (!store) throw new Error("Selected Jan Aushadhi Kendra not found");
+    const resolvedKendraCode = kendraCode || kendraId;
+    const store = await Kendra.findOne({ kendraCode: resolvedKendraCode, status: "active" }).lean();
+    if (!store) throw new Error("Selected Jan Aushadhi Kendra not found or inactive");
 
-    // Validate and deduct stock
-    const processedItems = items.map((item) => {
-      const med = uhiGatewayService.getMedicineById(item.medicineId);
+    // Merge duplicate lines so stock is validated against the total quantity.
+    const mergedItems = new Map();
+    for (const item of items) {
+      const medicineId = String(item.medicineId || "").trim();
+      if (!medicineId) throw new Error("Every order item needs a medicine id");
+      const quantity = Math.max(1, parseInt(item.quantity, 10) || 1);
+      const existing = mergedItems.get(medicineId);
+      if (existing) existing.quantity += quantity;
+      else mergedItems.set(medicineId, { medicineId, quantity });
+    }
+
+    // Validate the whole basket before decrementing any stock. This keeps the
+    // MongoDB inventory authoritative and gives customers a clear out-of-stock
+    // message instead of silently refilling the shelf.
+    const validatedItems = [];
+    for (const item of mergedItems.values()) {
+      const med = await uhiGatewayService.getMedicineById(item.medicineId);
       if (!med) throw new Error(`Medicine ${item.medicineId} not found in catalog`);
 
-      const qty = parseInt(item.quantity, 10) || 1;
-      let stock = store.inventory[med.id];
+      const stock = await Inventory.findOne({
+        kendraCode: resolvedKendraCode,
+        medicineId: med.id,
+      });
 
-      // Ensure inventory entry exists for all 200+ catalog medicines in simulation
-      if (!stock) {
-        stock = { inStock: true, units: 100 };
-        store.inventory[med.id] = stock;
-      } else if (!stock.inStock || stock.units < qty) {
-        stock.inStock = true;
-        stock.units = Math.max(stock.units + 50, qty + 20);
+      const availableUnits = stock && stock.inStock ? Number(stock.units) || 0 : 0;
+      if (!stock || !stock.inStock || availableUnits < item.quantity) {
+        throw new Error(
+          `${med.genericName} is out of stock at ${store.name}. Only ${availableUnits} unit(s) available.`
+        );
       }
 
-      // Deduct stock
-      stock.units -= qty;
+      validatedItems.push({
+        med,
+        quantity: item.quantity,
+        stock,
+        unitPrice: resolveInventoryPrice(stock, med),
+      });
+    }
+
+    const processedItems = [];
+    for (const { med, quantity, stock, unitPrice } of validatedItems) {
+      stock.units -= quantity;
       if (stock.units <= 0) {
-        stock.inStock = false;
         stock.units = 0;
+        stock.inStock = false;
       }
+      stock.lastUpdated = new Date();
+      await stock.save();
 
-      return {
+      processedItems.push({
         medicineId: med.id,
         drugCode: med.drugCode,
         genericName: med.genericName,
         packSize: med.packSize,
-        genericMrp: med.genericMrp,
-        quantity: qty,
-        totalPrice: Number((med.genericMrp * qty).toFixed(2)),
-      };
-    });
+        genericMrp: unitPrice,
+        quantity,
+        totalPrice: Number((unitPrice * quantity).toFixed(2)),
+      });
+    }
 
     const totalAmount = Number(
       processedItems.reduce((sum, item) => sum + item.totalPrice, 0).toFixed(2)
     );
 
-    const orderId = `ORD-${++this.orderCounter}`;
-    const newOrder = {
-      id: orderId,
-      customerName: customerName.trim(),
-      customerEmail: customerEmail.trim().toLowerCase(),
-      customerPhone: customerPhone ? customerPhone.trim() : "",
-      deliveryAddress: deliveryAddress ? deliveryAddress.trim() : "Counter Pickup",
-      deliveryType,
-      kendraId: store.id,
+    const counter = await Counter.findOneAndUpdate(
+      { key: "order" },
+      { $inc: { seq: 1 } },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+    if (counter.seq < 9403) {
+      counter.seq = 9403;
+      await counter.save();
+    }
+    const orderNumber = `ORD-${counter.seq}`;
+
+    const newOrder = await Order.create({
+      orderNumber,
+      customerUserId: customerUserId || null,
+      customerName: String(customerName || "Customer").trim(),
+      customerEmail: String(customerEmail || "").trim().toLowerCase(),
+      customerPhone: customerPhone ? String(customerPhone).trim() : "",
+      deliveryAddress: deliveryAddress ? String(deliveryAddress).trim() : "Counter Pickup",
+      deliveryType: deliveryType === "pickup" ? "pickup" : "delivery",
+      kendraCode: store.kendraCode,
       kendraName: store.name,
       kendraPhone: store.phone,
       kendraAddress: store.address,
       items: processedItems,
       totalAmount,
-      status: "placed", // placed -> confirmed -> ready -> completed -> cancelled
+      status: "placed",
       paymentMethod,
-      paymentStatus: orderData.paymentStatus || (paymentMethod.includes("Delivery") ? "pending_on_delivery" : "simulated_paid"),
-      transactionId: orderData.transactionId || (paymentMethod.includes("Delivery") ? null : `TXN-PMBJP-${Date.now().toString().slice(-6)}`),
+      paymentStatus:
+        orderData.paymentStatus ||
+        (paymentMethod.includes("Delivery") ? "pending_on_delivery" : "simulated_paid"),
+      transactionId:
+        orderData.transactionId ||
+        (paymentMethod.includes("Delivery") ? null : `TXN-PMBJP-${Date.now().toString().slice(-6)}`),
       paymentSimulationMethod: orderData.paymentSimulationMethod || "UPI",
-      notes: notes.trim(),
-      createdAt: new Date().toISOString(),
-      statusHistory: [{ status: "placed", timestamp: new Date().toISOString() }],
-    };
-
-    this.orders.unshift(newOrder);
-
-    // Auto register or update customer info
-    this.registerUser({
-      name: customerName,
-      email: customerEmail,
-      role: "customer",
-      phone: customerPhone,
-      address: deliveryAddress,
+      notes: notes ? String(notes).trim() : "",
+      statusHistory: [{ status: "placed", timestamp: new Date() }],
     });
 
-    return newOrder;
+    return mapOrder(newOrder);
   }
 
-  getCustomerOrders(customerEmail) {
-    const email = (customerEmail || "").trim().toLowerCase();
-    return this.orders.filter((o) => o.customerEmail === email);
+  async getCustomerOrders(customerEmail) {
+    const email = String(customerEmail || "").trim().toLowerCase();
+    const orders = await Order.find({ customerEmail: email }).sort({ createdAt: -1 });
+    return orders.map(mapOrder);
   }
 
-  getKendraOrders(kendraId) {
-    return this.orders.filter((o) => o.kendraId === kendraId);
-  }
-
-  getAllOrders() {
-    return this.orders;
-  }
-
-  updateOrderStatus(orderId, newStatus) {
-    const validStatuses = ["placed", "confirmed", "ready", "completed", "cancelled"];
-    if (!validStatuses.includes(newStatus)) {
+  async updateOrderStatus(orderNumber, newStatus, options = {}) {
+    if (!ORDER_STATUSES.includes(newStatus)) {
       throw new Error(`Invalid status: ${newStatus}`);
     }
 
-    const order = this.orders.find((o) => o.id === orderId);
+    const order = await Order.findOne({ orderNumber });
     if (!order) throw new Error("Order not found");
+    if (options.enforceKendraCode && order.kendraCode !== options.enforceKendraCode) {
+      const err = new Error("You can only update orders belonging to your own Kendra.");
+      err.status = 403;
+      throw err;
+    }
 
     order.status = newStatus;
-    if (!order.statusHistory) order.statusHistory = [];
-    order.statusHistory.push({ status: newStatus, timestamp: new Date().toISOString() });
+    order.statusHistory.push({ status: newStatus, timestamp: new Date() });
 
-    // If cancelled, restore stock
     if (newStatus === "cancelled") {
-      const store = uhiGatewayService.stores.find((s) => s.id === order.kendraId);
-      if (store) {
-        order.items.forEach((item) => {
-          if (store.inventory[item.medicineId]) {
-            store.inventory[item.medicineId].units += item.quantity;
-            store.inventory[item.medicineId].inStock = true;
-          }
-        });
+      for (const item of order.items) {
+        await Inventory.findOneAndUpdate(
+          { kendraCode: order.kendraCode, medicineId: item.medicineId },
+          { $inc: { units: item.quantity }, $set: { inStock: true, lastUpdated: new Date() } }
+        );
       }
     }
 
-    return order;
+    await order.save();
+    return mapOrder(order);
   }
 
   // =========================================================================
-  // Stock Alerts ("Notify Me when back in stock")
+  // Out-of-stock alerts
   // =========================================================================
 
-  createStockAlert({ customerName, customerEmail, customerPhone, medicineId, kendraId }) {
-    const med = uhiGatewayService.getMedicineById(medicineId);
+  async createStockAlert({
+    customerName,
+    customerEmail,
+    customerPhone,
+    customerUserId,
+    medicineId,
+    kendraCode,
+    kendraId,
+  }) {
+    const med = await uhiGatewayService.getMedicineById(medicineId);
     if (!med) throw new Error("Medicine not found");
 
+    const resolvedKendraCode = kendraCode || kendraId || null;
     let kendraName = "Any Nearby Kendra";
-    if (kendraId) {
-      const store = uhiGatewayService.stores.find((s) => s.id === kendraId);
+    if (resolvedKendraCode) {
+      const store = await Kendra.findOne({ kendraCode: resolvedKendraCode }).lean();
       if (store) kendraName = store.name;
     }
 
-    const alertId = `alt-${Date.now()}`;
-    const newAlert = {
-      id: alertId,
-      customerName: (customerName || "Customer").trim(),
-      customerEmail: customerEmail.trim().toLowerCase(),
-      customerPhone: customerPhone ? customerPhone.trim() : "",
+    const alert = await StockAlert.create({
+      customerUserId: customerUserId || null,
+      customerName: String(customerName || "Customer").trim(),
+      customerEmail: String(customerEmail || "").trim().toLowerCase(),
+      customerPhone: customerPhone ? String(customerPhone).trim() : "",
       medicineId: med.id,
       medicineName: med.genericName,
       drugCode: med.drugCode,
-      kendraId: kendraId || null,
+      kendraCode: resolvedKendraCode,
       kendraName,
       status: "pending",
-      createdAt: new Date().toISOString(),
-      notificationMessage: null,
-      notifiedAt: null,
-    };
-
-    this.stockAlerts.unshift(newAlert);
-    return newAlert;
-  }
-
-  getCustomerStockAlerts(customerEmail) {
-    const email = (customerEmail || "").trim().toLowerCase();
-    return this.stockAlerts.filter((a) => a.customerEmail === email);
-  }
-
-  notifyWaitingCustomers(kendraId, medicineId, kendraName, unitsAvailable) {
-    const matchingAlerts = this.stockAlerts.filter(
-      (a) =>
-        a.medicineId === medicineId &&
-        a.status === "pending" &&
-        (!a.kendraId || a.kendraId === kendraId)
-    );
-
-    const now = new Date().toISOString();
-    matchingAlerts.forEach((alert) => {
-      alert.status = "notified";
-      alert.notifiedAt = now;
-      alert.notificationMessage = `Good news! "${alert.medicineName}" is now back in stock at ${kendraName} (${unitsAvailable} units available). You can now place your order online!`;
     });
 
-    return matchingAlerts.length;
+    return alert.toJSON();
   }
+
+  async getCustomerStockAlerts(customerEmail) {
+    const email = String(customerEmail || "").trim().toLowerCase();
+    const alerts = await StockAlert.find({ customerEmail: email }).sort({ createdAt: -1 });
+    return alerts.map((alert) => alert.toJSON());
+  }
+
+  async notifyWaitingCustomers(kendraCode, medicineId, kendraName, unitsAvailable) {
+    const now = new Date();
+    const message = `Good news! The medicine is now back in stock at ${kendraName} (${unitsAvailable} units available). You can place your order online now.`;
+
+    const result = await StockAlert.updateMany(
+      {
+        medicineId,
+        status: "pending",
+        $or: [{ kendraCode: null }, { kendraCode }],
+      },
+      {
+        $set: {
+          status: "notified",
+          notifiedAt: now,
+          notificationMessage: message,
+        },
+      }
+    );
+
+    return result.modifiedCount || 0;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Small local helpers (kept outside the class for readability)
+// ---------------------------------------------------------------------------
+async function updateOwnerById(application, status, store, rejectionReason = "") {
+  const update = {
+    status,
+    ...(store ? { kendraCode: store.kendraCode, kendraName: store.name } : {}),
+  };
+  if (rejectionReason) update.rejectionReason = rejectionReason;
+  await User.updateOne({ _id: application.ownerUserId }, { $set: update });
+}
+
+async function updateOwnerByEmail(application, status, store, rejectionReason = "") {
+  const update = {
+    status,
+    ...(store ? { kendraCode: store.kendraCode, kendraName: store.name } : {}),
+  };
+  if (rejectionReason) update.rejectionReason = rejectionReason;
+  await User.updateOne({ email: application.email }, { $set: update });
+}
+
+function publicMedicineId(medicine) {
+  if (!medicine) return null;
+  return medicine.id || (medicine._id ? String(medicine._id) : null);
+}
+
+function resolveInventoryPrice(stock, medicine) {
+  const stockPrice = Number(stock && stock.price);
+  if (Number.isFinite(stockPrice) && stockPrice > 0) {
+    return Number(stockPrice.toFixed(2));
+  }
+  const catalogPrice = Number(medicine && medicine.genericMrp);
+  return Number.isFinite(catalogPrice) ? Number(catalogPrice.toFixed(2)) : 0;
+}
+
+function escapeRegex(value) {
+  return String(value || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Email is a best-effort side effect of an admin decision. It is dispatched on
+ * the next tick so a slow SMTP/Ethereal connection can never delay or block the
+ * approval/rejection HTTP response.
+ */
+function queueDecisionEmail(payload) {
+  setImmediate(() => {
+    sendKendraDecisionEmail(payload).catch((err) =>
+      console.warn("[email] Kendra decision notice failed:", err.message)
+    );
+  });
 }
 
 module.exports = new DashboardService();

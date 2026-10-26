@@ -2,29 +2,44 @@ const mongoose = require("mongoose");
 
 let isConnected = false;
 
-async function connectDB() {
-  const uri = process.env.MONGO_URI;
-  if (!uri) {
-    isConnected = false;
-    console.log("[db] MONGO_URI not configured -> Running on in-memory ABDM / UHI Gateway Engine");
-    return;
-  }
+const DEFAULT_URI = "mongodb://127.0.0.1:27017/rxcompare";
+
+async function connectDB({ required = true } = {}) {
+  const uri = process.env.MONGO_URI || DEFAULT_URI;
+
+  mongoose.set("bufferCommands", false);
+
   try {
-    mongoose.set("bufferCommands", false);
-    // Attempt connection with a short timeout so boot is fast if DB is offline
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 2000 });
+    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 });
     isConnected = true;
     console.log(`[db] connected -> ${uri}`);
+    return true;
   } catch (err) {
     isConnected = false;
-    console.log(`[db] database offline (${err.message}) -> Running on in-memory ABDM / UHI Gateway Engine`);
+    console.error(`[db] connection failed (${err.message})`);
+    if (required) throw err;
+    return false;
   }
 }
 
 function getDbStatus() {
-  return isConnected;
+  return isConnected && mongoose.connection.readyState === 1;
+}
+
+/**
+ * Guard for routes that cannot work without the database.
+ */
+function requireDb(_req, res, next) {
+  if (!getDbStatus()) {
+    return res.status(503).json({
+      success: false,
+      error: "Database unavailable. Please start MongoDB and try again.",
+    });
+  }
+  next();
 }
 
 module.exports = connectDB;
 module.exports.getDbStatus = getDbStatus;
-
+module.exports.requireDb = requireDb;
+module.exports.DEFAULT_URI = DEFAULT_URI;

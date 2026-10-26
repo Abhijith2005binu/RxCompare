@@ -1,237 +1,319 @@
 const express = require("express");
 const router = express.Router();
+
 const dashboardService = require("../services/dashboardService");
+const { requireDb } = require("../config/db");
+const { authenticate, requireRole, requireKendraAccess } = require("../middleware/auth");
+
+// Every dashboard endpoint requires a signed-in account.
+router.use(requireDb, authenticate);
 
 // -----------------------------------------------------------------------------
-// Auth & Demo Switcher
+// Admin endpoints (hardcoded administrator session only)
 // -----------------------------------------------------------------------------
-router.get("/auth/demo-users", (_req, res) => {
-  res.json({ success: true, users: dashboardService.getDemoUsers() });
-});
-
-router.post("/auth/register", (req, res, next) => {
+router.get("/admin/stats", requireRole("admin"), async (_req, res, next) => {
   try {
-    const { name, email, role, phone, address, kendraId, kendraName } = req.body;
-    if (!name || !email) {
-      return res.status(400).json({ success: false, error: "Name and email are required" });
-    }
-    const result = dashboardService.registerUser({ name, email, role, phone, address, kendraId, kendraName });
-    res.json({ success: true, user: result.user, alreadyExisted: result.alreadyExisted });
+    res.json({ success: true, stats: await dashboardService.getAdminStats() });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/auth/login", (req, res, next) => {
+router.get("/admin/applications", requireRole("admin"), async (req, res, next) => {
   try {
-    const { email } = req.body;
-    const user = dashboardService.getUserByEmail(email);
-    if (!user) {
-      return res.status(404).json({ success: false, error: "User not found" });
-    }
-    res.json({ success: true, user });
+    const applications = await dashboardService.listKendraApplications(req.query.status || "all");
+    res.json({ success: true, applications });
   } catch (err) {
     next(err);
   }
 });
 
-// -----------------------------------------------------------------------------
-// Admin Endpoints
-// -----------------------------------------------------------------------------
-router.get("/admin/stats", (_req, res) => {
-  res.json({ success: true, stats: dashboardService.getAdminStats() });
-});
+router.post(
+  "/admin/applications/:id/approve",
+  requireRole("admin"),
+  async (req, res, next) => {
+    try {
+      const result = await dashboardService.approveKendraApplication(req.params.id);
+      res.json({
+        success: true,
+        message: `Kendra "${result.application.name}" (${result.application.kendraCode}) approved and added to the active network.`,
+        data: result,
+      });
+    } catch (err) {
+      if (/not found/i.test(err.message)) err.status = 404;
+      else if (/already|rejected|verified/i.test(err.message)) err.status = 400;
+      next(err);
+    }
+  }
+);
 
-router.get("/admin/applications", (req, res) => {
-  const { status } = req.query;
-  const applications = dashboardService.listKendraApplications(status);
-  res.json({ success: true, applications });
-});
+router.post(
+  "/admin/applications/:id/reject",
+  requireRole("admin"),
+  async (req, res, next) => {
+    try {
+      const { reason } = req.body || {};
+      const application = await dashboardService.rejectKendraApplication(req.params.id, reason);
+      res.json({
+        success: true,
+        message: `Application rejected for "${application.name}"`,
+        data: application,
+      });
+    } catch (err) {
+      if (/not found/i.test(err.message)) err.status = 404;
+      else if (/already|approved/i.test(err.message)) err.status = 400;
+      next(err);
+    }
+  }
+);
 
-router.post("/admin/applications/:id/approve", (req, res, next) => {
+router.get("/admin/orders", requireRole("admin"), async (_req, res, next) => {
   try {
-    const result = dashboardService.approveKendraApplication(req.params.id);
+    res.json({ success: true, orders: await dashboardService.getAllOrders() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.get("/admin/users", requireRole("admin"), async (req, res, next) => {
+  try {
+    const users = await dashboardService.listUsers(req.query.role || "all");
+    res.json({ success: true, users });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.delete("/admin/users/:id", requireRole("admin"), async (req, res, next) => {
+  try {
+    const user = await dashboardService.deleteUser(req.params.id);
     res.json({
       success: true,
-      message: `Kendra "${result.application.name}" (${result.application.kendraCode}) approved and added to active network!`,
-      data: result,
+      message: `${user.role === "kendra_owner" ? "Kendra owner" : "Customer"} "${user.name}" deleted permanently.`,
+      user,
     });
   } catch (err) {
+    if (/not found/i.test(err.message)) err.status = 404;
+    if (err.name === "CastError") err.status = 400;
     next(err);
   }
 });
 
-router.post("/admin/applications/:id/reject", (req, res, next) => {
+// -----------------------------------------------------------------------------
+// Kendra owner endpoints
+// -----------------------------------------------------------------------------
+router.get(
+  "/kendra/inventory/:kendraCode",
+  requireRole("kendra_owner", "admin"),
+  requireKendraAccess(),
+  async (req, res, next) => {
+    try {
+      const inventory = await dashboardService.getKendraInventory(req.params.kendraCode);
+      res.json({ success: true, ...inventory });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.put(
+  "/kendra/inventory/:kendraCode/:medicineId",
+  requireRole("kendra_owner", "admin"),
+  requireKendraAccess(),
+  async (req, res, next) => {
+    try {
+      const { units, inStock, batchNumber, expiryDate, price, genericMrp } = req.body || {};
+      const result = await dashboardService.updateKendraStock(
+        req.params.kendraCode,
+        req.params.medicineId,
+        { units, inStock, batchNumber, expiryDate, price, genericMrp }
+      );
+      res.json({ success: true, message: "Stock and price updated successfully", ...result });
+    } catch (err) {
+      if (/not found/i.test(err.message)) err.status = 404;
+      else if (/valid|required|greater than zero/i.test(err.message)) err.status = 400;
+      next(err);
+    }
+  }
+);
+
+router.post(
+  "/kendra/inventory/:kendraCode",
+  requireRole("kendra_owner", "admin"),
+  requireKendraAccess(),
+  async (req, res, next) => {
+    try {
+      const result = await dashboardService.addMedicineToKendra(
+        req.params.kendraCode,
+        req.body || {}
+      );
+      res.status(201).json({
+        success: true,
+        message: "New formulation added to Kendra inventory",
+        ...result,
+      });
+    } catch (err) {
+      if (/not found/i.test(err.message)) err.status = 404;
+      else if (/valid|required|greater than zero|identifier/i.test(err.message)) {
+        err.status = 400;
+      }
+      next(err);
+    }
+  }
+);
+
+router.get(
+  "/kendra/orders/:kendraCode",
+  requireRole("kendra_owner", "admin"),
+  requireKendraAccess(),
+  async (req, res, next) => {
+    try {
+      const orders = await dashboardService.getKendraOrders(req.params.kendraCode);
+      res.json({ success: true, orders });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.put(
+  "/kendra/orders/:orderId/status",
+  requireRole("kendra_owner", "admin"),
+  async (req, res, next) => {
+    try {
+      const { status } = req.body || {};
+      const order = await dashboardService.updateOrderStatus(req.params.orderId, status, {
+        enforceKendraCode: req.user.role === "admin" ? null : req.user.kendraCode,
+      });
+
+      res.json({
+        success: true,
+        message: `Order status updated to ${status}`,
+        order,
+      });
+    } catch (err) {
+      if (/not found/i.test(err.message)) err.status = 404;
+      next(err);
+    }
+  }
+);
+
+// -----------------------------------------------------------------------------
+// Customer endpoints (orders + stock alerts)
+// -----------------------------------------------------------------------------
+router.post("/orders/quote", requireRole("customer", "admin"), async (req, res, next) => {
   try {
-    const { reason } = req.body;
-    const result = dashboardService.rejectKendraApplication(req.params.id, reason);
-    res.json({
-      success: true,
-      message: `Application rejected for "${result.name}"`,
-      data: result,
+    const { kendraCode, kendraId, items } = req.body || {};
+    const quote = await dashboardService.quoteOrder({
+      kendraCode: kendraCode || kendraId || null,
+      items,
     });
+    res.json({ success: true, ...quote });
   } catch (err) {
+    if (/not found|empty|valid|required|available/i.test(err.message)) err.status = 400;
     next(err);
   }
 });
 
-router.get("/admin/orders", (_req, res) => {
-  res.json({ success: true, orders: dashboardService.getAllOrders() });
-});
-
-// -----------------------------------------------------------------------------
-// Kendra Owner Endpoints
-// -----------------------------------------------------------------------------
-router.post("/kendra/register", (req, res, next) => {
+router.post("/orders", requireRole("customer", "admin"), async (req, res, next) => {
   try {
-    const { kendraName, ownerName, email, phone, address, city, state } = req.body;
-    if (!kendraName || !ownerName || !email || !phone || !address || !city || !state) {
+    const isAdmin = req.user.role === "admin";
+    const body = req.body || {};
+
+    const customerEmail = isAdmin ? body.customerEmail || req.user.email : req.user.email;
+    const customerName = isAdmin ? body.customerName || req.user.name : req.user.name;
+    const customerPhone = body.customerPhone || req.user.phone || "";
+
+    if (!customerEmail) {
       return res.status(400).json({
         success: false,
-        error: "Please provide all required Kendra fields (name, owner, email, phone, address, city, state)",
+        error: "Customer email is required to place an order.",
       });
     }
-    const app = dashboardService.submitKendraRegistration(req.body);
+
+    const order = await dashboardService.createOrder({
+      ...body,
+      customerEmail,
+      customerName,
+      customerPhone,
+      customerUserId: isAdmin ? null : req.user.id,
+    });
+
     res.status(201).json({
       success: true,
-      message: "Kendra registration submitted successfully. Awaiting Admin verification.",
-      application: app,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get("/kendra/inventory/:kendraId", (req, res, next) => {
-  try {
-    const inventory = dashboardService.getKendraInventory(req.params.kendraId);
-    res.json({ success: true, ...inventory });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.put("/kendra/inventory/:kendraId/:medicineId", (req, res, next) => {
-  try {
-    const { kendraId, medicineId } = req.params;
-    const { units, inStock, batchNumber, expiryDate } = req.body;
-    const result = dashboardService.updateKendraStock(kendraId, medicineId, {
-      units,
-      inStock,
-      batchNumber,
-      expiryDate,
-    });
-    res.json({
-      success: true,
-      message: "Stock updated successfully",
-      ...result,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.post("/kendra/inventory/:kendraId", (req, res, next) => {
-  try {
-    const { kendraId } = req.params;
-    const result = dashboardService.addMedicineToKendra(kendraId, req.body);
-    res.status(201).json({
-      success: true,
-      message: "New formulation added to Kendra inventory",
-      ...result,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.get("/kendra/orders/:kendraId", (req, res, next) => {
-  try {
-    const orders = dashboardService.getKendraOrders(req.params.kendraId);
-    res.json({ success: true, orders });
-  } catch (err) {
-    next(err);
-  }
-});
-
-router.put("/kendra/orders/:orderId/status", (req, res, next) => {
-  try {
-    const { orderId } = req.params;
-    const { status } = req.body;
-    const updated = dashboardService.updateOrderStatus(orderId, status);
-    res.json({
-      success: true,
-      message: `Order status updated to ${status}`,
-      order: updated,
-    });
-  } catch (err) {
-    next(err);
-  }
-});
-
-// -----------------------------------------------------------------------------
-// Customer Endpoints (Order Online & Stock Alerts)
-// -----------------------------------------------------------------------------
-router.post("/orders", (req, res, next) => {
-  try {
-    const order = dashboardService.createOrder(req.body);
-    res.status(201).json({
-      success: true,
-      message: `Order #${order.id} placed successfully with ${order.kendraName}!`,
+      message: `Order #${order.orderNumber} placed successfully with ${order.kendraName}.`,
       order,
     });
   } catch (err) {
+    if (/not found|must contain|required|out of stock|available/i.test(err.message)) {
+      err.status = 400;
+    }
     next(err);
   }
 });
 
-router.get("/orders/my", (req, res, next) => {
+router.get("/orders/my", requireRole("customer", "admin"), async (req, res, next) => {
   try {
-    const { email } = req.query;
+    const email =
+      req.user.role === "admin" ? req.query.email || req.user.email : req.user.email;
     if (!email) {
-      return res.status(400).json({ success: false, error: "Email query param required" });
+      return res.status(400).json({ success: false, error: "Email is required." });
     }
-    const orders = dashboardService.getCustomerOrders(email);
+    const orders = await dashboardService.getCustomerOrders(email);
     res.json({ success: true, orders });
   } catch (err) {
     next(err);
   }
 });
 
-router.post("/stock-alerts", (req, res, next) => {
+router.post("/stock-alerts", requireRole("customer", "admin"), async (req, res, next) => {
   try {
-    const { customerName, customerEmail, customerPhone, medicineId, kendraId } = req.body;
-    if (!customerEmail || !medicineId) {
-      return res.status(400).json({ success: false, error: "Email and medicineId are required" });
+    const body = req.body || {};
+    const customerEmail =
+      req.user.role === "admin" ? body.customerEmail || req.user.email : req.user.email;
+
+    if (!customerEmail || !body.medicineId) {
+      return res.status(400).json({
+        success: false,
+        error: "Email and medicineId are required.",
+      });
     }
-    const alert = dashboardService.createStockAlert({
-      customerName,
+
+    const alert = await dashboardService.createStockAlert({
+      ...body,
       customerEmail,
-      customerPhone,
-      medicineId,
-      kendraId,
+      customerName: body.customerName || req.user.name,
+      customerPhone: body.customerPhone || req.user.phone,
+      customerUserId: req.user.role === "admin" ? null : req.user.id,
     });
+
     res.status(201).json({
       success: true,
-      message: `Alert subscribed! We will notify you as soon as "${alert.medicineName}" is restocked.`,
+      message: `Alert subscribed. We will notify you as soon as "${alert.medicineName}" is restocked.`,
       alert,
     });
   } catch (err) {
+    if (/not found|required/i.test(err.message)) err.status = 400;
     next(err);
   }
 });
 
-router.get("/stock-alerts/my", (req, res, next) => {
-  try {
-    const { email } = req.query;
-    if (!email) {
-      return res.status(400).json({ success: false, error: "Email query param required" });
+router.get(
+  "/stock-alerts/my",
+  requireRole("customer", "admin"),
+  async (req, res, next) => {
+    try {
+      const email =
+        req.user.role === "admin" ? req.query.email || req.user.email : req.user.email;
+      if (!email) {
+        return res.status(400).json({ success: false, error: "Email is required." });
+      }
+      const alerts = await dashboardService.getCustomerStockAlerts(email);
+      res.json({ success: true, alerts });
+    } catch (err) {
+      next(err);
     }
-    const alerts = dashboardService.getCustomerStockAlerts(email);
-    res.json({ success: true, alerts });
-  } catch (err) {
-    next(err);
   }
-});
+);
 
 module.exports = router;

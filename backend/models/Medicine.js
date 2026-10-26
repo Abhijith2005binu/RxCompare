@@ -4,13 +4,8 @@ const mongoose = require("mongoose");
  * One document = one generic (Jan Aushadhi) formulation, with an array of
  * known branded equivalents sold in the open market.
  *
- * This shape mirrors how the actual data.gov.in / PMBJP price list works:
- * the government list only publishes GENERIC drugs + MRP (drugCode, name,
- * composition, unitSize, mrp). Branded equivalents + their prices are not
- * in that dataset, so in a production build you'd enrich this collection
- * with a second source (e.g. scraped/curated 1mg or NPPA branded MRP data).
- * For now `brandedEquivalents` is seeded manually/approximately — see
- * backend/data/medicines.seed.js for notes on every figure's source.
+ * `id` is the stable public identifier (e.g. "med-001") used by the frontend,
+ * inventory rows and orders, while `_id` remains the Mongo identifier.
  */
 const brandedEquivalentSchema = new mongoose.Schema(
   {
@@ -21,16 +16,37 @@ const brandedEquivalentSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const purchaseInfoSchema = new mongoose.Schema(
+  {
+    unitPrice: { type: Number },
+    packMrp: { type: Number },
+    packSize: { type: String },
+    currency: { type: String, default: "INR" },
+    subsidyScheme: { type: String },
+    prescriptionRequired: { type: Boolean },
+    regulatoryAuthority: { type: String },
+    purchaseAvailability: { type: String },
+    qualityStandard: { type: String },
+  },
+  { _id: false, strict: false }
+);
+
 const medicineSchema = new mongoose.Schema(
   {
+    id: { type: String, required: true, unique: true, index: true }, // stable public id
     drugCode: { type: String, required: true, unique: true, index: true }, // PMBJP drug code
     genericName: { type: String, required: true, trim: true, index: true },
     composition: { type: String, trim: true },
-    category: { type: String, trim: true, index: true }, // e.g. "Cardiac", "Diabetes", "Antibiotic"
-    packSize: { type: String, required: true }, // e.g. "10 tablets", "30ml bottle"
-    genericMrp: { type: Number, required: true }, // Jan Aushadhi MRP, INR
+    category: { type: String, trim: true, index: true },
+    dosageForm: { type: String, trim: true, default: "" },
+    packSize: { type: String, required: true },
+    genericMrp: { type: Number, required: true },
+    prescriptionRequired: { type: Boolean, default: false },
+    storageInstructions: { type: String, default: "" },
+    uses: { type: String, default: "" },
+    purchaseInfo: { type: purchaseInfoSchema, default: {} },
     brandedEquivalents: [brandedEquivalentSchema],
-    searchKeywords: [{ type: String, index: true }], // brand names + common misspellings, lowercased
+    searchKeywords: [{ type: String, index: true }],
   },
   { timestamps: true }
 );
