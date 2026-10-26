@@ -84,6 +84,51 @@ router.get("/admin/users", requireRole("admin"), async (req, res, next) => {
   }
 });
 
+router.patch("/admin/users/:id/status", requireRole("admin"), async (req, res, next) => {
+  try {
+    const { status } = req.body || {};
+    const user = await dashboardService.setUserStatus(req.params.id, status);
+    res.json({
+      success: true,
+      message: `${user.role === "kendra_owner" ? "Kendra owner" : "Customer"} "${user.name}" is now ${user.status}.`,
+      user,
+    });
+  } catch (err) {
+    if (/not found/i.test(err.message)) err.status = 404;
+    else if (/invalid|only|must be/i.test(err.message)) err.status = 400;
+    else if (err.name === "CastError") err.status = 400;
+    next(err);
+  }
+});
+
+router.get("/admin/kendras", requireRole("admin"), async (_req, res, next) => {
+  try {
+    res.json({ success: true, kendras: await dashboardService.listKendrasForAdmin() });
+  } catch (err) {
+    next(err);
+  }
+});
+
+router.patch(
+  "/admin/kendras/:kendraCode/status",
+  requireRole("admin"),
+  async (req, res, next) => {
+    try {
+      const { status } = req.body || {};
+      const kendra = await dashboardService.setKendraStatus(req.params.kendraCode, status);
+      res.json({
+        success: true,
+        message: `Kendra "${kendra.name}" is now ${kendra.status}.`,
+        kendra,
+      });
+    } catch (err) {
+      if (/not found/i.test(err.message)) err.status = 404;
+      else if (/invalid/i.test(err.message)) err.status = 400;
+      next(err);
+    }
+  }
+);
+
 router.delete("/admin/users/:id", requireRole("admin"), async (req, res, next) => {
   try {
     const user = await dashboardService.deleteUser(req.params.id);
@@ -193,6 +238,7 @@ router.put(
       });
     } catch (err) {
       if (/not found/i.test(err.message)) err.status = 404;
+      else if (/invalid status/i.test(err.message)) err.status = 400;
       next(err);
     }
   }

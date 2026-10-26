@@ -27,17 +27,19 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, trim: true, default: "" },
     address: { type: String, trim: true, default: "" },
 
-    // customers -> active; owners -> pending / approved / rejected
+    // customers -> active / suspended; owners -> pending / approved / rejected / suspended
     status: {
       type: String,
-      enum: ["active", "pending", "approved", "rejected"],
+      enum: ["active", "pending", "approved", "rejected", "suspended"],
       default: "active",
     },
 
-    // Email verification
+    // Email verification (6-digit one-time password, hashed at rest)
     emailVerified: { type: Boolean, default: false, index: true },
-    verificationTokenHash: { type: String, select: false },
-    verificationTokenExpiresAt: { type: Date, select: false },
+    verificationOtpHash: { type: String, select: false },
+    verificationOtpExpiresAt: { type: Date, select: false },
+    verificationOtpAttempts: { type: Number, default: 0, select: false },
+    verificationOtpSentAt: { type: Date, select: false },
     verifiedAt: { type: Date },
 
     // Kendra owner link (set once the admin approves the application)
@@ -62,8 +64,10 @@ userSchema.set("toJSON", {
   virtuals: true,
   transform(_doc, ret) {
     delete ret.passwordHash;
-    delete ret.verificationTokenHash;
-    delete ret.verificationTokenExpiresAt;
+    delete ret.verificationOtpHash;
+    delete ret.verificationOtpExpiresAt;
+    delete ret.verificationOtpAttempts;
+    delete ret.verificationOtpSentAt;
     delete ret.__v;
     ret.id = String(ret._id);
     return ret;

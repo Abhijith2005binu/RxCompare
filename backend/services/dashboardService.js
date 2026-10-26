@@ -20,7 +20,14 @@ const Counter = require("../models/Counter");
 const uhiGatewayService = require("./uhiGatewayService");
 const { sendKendraDecisionEmail } = require("./emailService");
 
-const ORDER_STATUSES = ["placed", "confirmed", "ready", "completed", "cancelled"];
+const ORDER_STATUSES = [
+  "placed",
+  "confirmed",
+  "ready",
+  "out_for_delivery",
+  "completed",
+  "cancelled",
+];
 
 function asPlain(doc) {
   if (!doc) return null;
@@ -172,6 +179,72 @@ class DashboardService {
       email: user.email,
       role: user.role,
       removedKendraCodes: codes,
+    };
+  }
+
+  async setUserStatus(userId, status) {
+    if (!["active", "approved", "suspended"].includes(status)) {
+      throw new Error(`Invalid user status: ${status}`);
+    }
+
+    const user = await User.findById(userId);
+    if (!user) throw new Error("User not found");
+
+    if (status === "suspended") {
+      if (!["active", "approved"].includes(user.status)) {
+        throw new Error("Only an active or approved account can be suspended");
+      }
+    } else if (user.role === "kendra_owner" && status !== "approved") {
+      throw new Error("A Kendra owner account must be reactivated as approved");
+    } else if (user.role === "customer" && status !== "active") {
+      throw new Error("A customer account must be reactivated as active");
+    }
+
+    user.status = status;
+    await user.save();
+
+    return {
+      id: String(user._id),
+      name: user.name,
+      email: user.email,
+      role: user.role,
+      status: user.status,
+    };
+  }
+
+  async listKendrasForAdmin() {
+    const kendras = await Kendra.find({}).sort({ status: 1, name: 1 }).lean();
+    return kendras.map((kendra) => ({
+      id: kendra.kendraCode,
+      kendraCode: kendra.kendraCode,
+      name: kendra.name,
+      ownerName: kendra.ownerName || "",
+      address: kendra.address,
+      city: kendra.city,
+      district: kendra.district || "",
+      state: kendra.state,
+      phone: kendra.phone || "",
+      email: kendra.email || "",
+      status: kendra.status,
+    }));
+  }
+
+  async setKendraStatus(kendraCode, status) {
+    if (!["active", "suspended"].includes(status)) {
+      throw new Error(`Invalid Kendra status: ${status}`);
+    }
+
+    const kendra = await Kendra.findOne({ kendraCode });
+    if (!kendra) throw new Error("Kendra not found");
+
+    kendra.status = status;
+    await kendra.save();
+
+    return {
+      id: kendra.kendraCode,
+      kendraCode: kendra.kendraCode,
+      name: kendra.name,
+      status: kendra.status,
     };
   }
 
@@ -849,6 +922,12 @@ class DashboardService {
       const err = new Error("You can only update orders belonging to your own Kendra.");
       err.status = 403;
       throw err;
+    }
+
+    // Repeating the same status is a no-op: keeps status history clean and
+    // prevents a cancelled order from restoring its stock twice.
+    if (order.status === newStatus) {
+      return mapOrder(order);
     }
 
     order.status = newStatus;

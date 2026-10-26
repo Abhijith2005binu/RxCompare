@@ -135,9 +135,6 @@
 
           <!-- Guest controls -->
           <div class="auth-controls" id="auth-guest-controls">
-            <a href="/owner-login" data-route="/owner-login" class="auth-controls__owner" id="btn-header-owner-login">
-              Kendra Owner Login
-            </a>
             <button type="button" class="auth-controls__signin" id="btn-header-login">Sign In</button>
             <button type="button" class="btn-appointment auth-controls__register" id="btn-header-register">Register</button>
           </div>
@@ -554,9 +551,11 @@
               <span class="kpi-label">Out of Stock</span>
               <span class="kpi-value text-rust" id="kpi-kendra-out-stock">—</span>
             </div>
-            <div class="kpi-card">
+            <div class="kpi-card kpi-card--action" id="kpi-pending-orders-card" role="button" tabindex="0"
+              aria-label="View pending customer orders">
               <span class="kpi-label">Pending Customer Orders</span>
               <span class="kpi-value text-navy" id="kpi-kendra-orders">—</span>
+              <span class="kpi-card__hint">Click to view order details</span>
             </div>
           </div>
 
@@ -654,6 +653,9 @@
           <button type="button" class="subtab is-active" data-subtab="admin-approvals">
             Kendra Registration Applications (<span id="count-admin-pending">0</span>)
           </button>
+          <button type="button" class="subtab" data-subtab="admin-kendras">
+            Kendra Network (<span id="count-admin-kendras">0</span>)
+          </button>
           <button type="button" class="subtab" data-subtab="admin-all-orders">
             System-wide Customer Orders Audit (<span id="count-admin-orders">0</span>)
           </button>
@@ -682,6 +684,24 @@
           </div>
         </div>
 
+        <!-- Tab: Kendra Network -->
+        <div id="subtab-admin-kendras" class="subtab-panel">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Code</th>
+                  <th>Kendra &amp; Owner</th>
+                  <th>Location</th>
+                  <th>Status</th>
+                  <th>Admin Action</th>
+                </tr>
+              </thead>
+              <tbody id="admin-kendras-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+
         <!-- Tab: All Orders Audit -->
         <div id="subtab-admin-all-orders" class="subtab-panel">
           <div class="table-wrap">
@@ -695,6 +715,7 @@
                   <th>Total (INR)</th>
                   <th>Payment Status</th>
                   <th>Status</th>
+                  <th>Admin Action</th>
                 </tr>
               </thead>
               <tbody id="admin-orders-tbody"></tbody>
@@ -725,7 +746,7 @@
 
     <!-- VIEW 5: Sign In -->
     <section id="view-login" class="view-panel auth-view">
-      <div class="auth-shell">
+      <div class="auth-shell auth-shell--single">
         <div class="auth-card">
           <p class="auth-eyebrow">Secure Account Access</p>
           <h2 class="auth-title">Sign in to RxCompare</h2>
@@ -769,29 +790,6 @@
             <a href="/verify-email" data-route="/verify-email">Need to verify your email?</a>
           </div>
         </div>
-
-        <aside class="auth-aside">
-          <h3 class="auth-aside__title">Training &amp; demo accounts</h3>
-          <p class="auth-aside__text">
-            These seeded accounts exist in the local MongoDB database. Run
-            <span class="mono">npm run seed</span> before using them.
-          </p>
-          <div class="demo-cred">
-            <span class="demo-cred__role">Customer</span>
-            <span class="mono">ramesh.sharma@gmail.com</span>
-            <span class="mono demo-cred__password">Customer@123</span>
-          </div>
-          <div class="demo-cred">
-            <span class="demo-cred__role">Kendra Owner</span>
-            <span class="mono">parel.kendra@pmbjp.in</span>
-            <span class="mono demo-cred__password">Owner@123</span>
-          </div>
-          <div class="demo-cred">
-            <span class="demo-cred__role demo-cred__role--pending">Pending Kendra Owner</span>
-            <span class="mono">anita.kendra@pmbjp.in</span>
-            <span class="mono demo-cred__password">Owner@123</span>
-          </div>
-        </aside>
       </div>
     </section>
 
@@ -821,8 +819,8 @@
             <p class="auth-success__email">Verification email requested for
               <strong id="register-success-email"></strong>
             </p>
-            <a id="register-success-link" class="btn btn--primary" href="#" target="_blank"
-              rel="noopener noreferrer" hidden>Open verification link (development)</a>
+            <a id="register-success-link" class="btn btn--primary" href="/verify-email"
+              data-route="/verify-email">Enter verification OTP</a>
             <a class="btn btn--outline" href="/login" data-route="/login">Go to sign in</a>
           </div>
 
@@ -842,7 +840,7 @@
               <div class="form-group">
                 <label for="cust-phone">Phone number</label>
                 <input id="cust-phone" name="phone" type="tel" class="form-input"
-                  autocomplete="tel" placeholder="+91 98765 43210" />
+                  autocomplete="tel" placeholder="+91 98765 43210" value="+91 " />
               </div>
               <div class="form-group">
                 <label for="cust-password">Password *</label>
@@ -877,14 +875,30 @@
             </p>
           </form>
 
-          <!-- Kendra owner form -->
+          <!-- Kendra owner form (3-step wizard) -->
           <form id="register-owner-form" class="auth-form" data-register-panel="owner" novalidate hidden>
-            <div class="auth-grid">
-              <div class="form-group">
-                <label for="own-kendra-name">Kendra / shop name *</label>
-                <input id="own-kendra-name" name="kendraName" type="text" class="form-input"
-                  placeholder="e.g. Jan Aushadhi Kendra - Sector 14" required />
+            <div class="form-progress" aria-label="Kendra registration progress">
+              <div class="form-progress__steps">
+                <div class="form-progress__step is-active" data-owner-progress="1">
+                  <span class="form-progress__dot">1</span>
+                  <span class="form-progress__label">Account</span>
+                </div>
+                <div class="form-progress__step" data-owner-progress="2">
+                  <span class="form-progress__dot">2</span>
+                  <span class="form-progress__label">Kendra details</span>
+                </div>
+                <div class="form-progress__step" data-owner-progress="3">
+                  <span class="form-progress__dot">3</span>
+                  <span class="form-progress__label">Location</span>
+                </div>
               </div>
+              <div class="form-progress__bar">
+                <span class="form-progress__fill" id="owner-progress-fill"></span>
+              </div>
+            </div>
+
+            <div class="form-step" data-owner-step="1">
+            <div class="auth-grid">
               <div class="form-group">
                 <label for="own-owner-name">Owner / pharmacist name *</label>
                 <input id="own-owner-name" name="ownerName" type="text" class="form-input"
@@ -898,7 +912,7 @@
               <div class="form-group">
                 <label for="own-phone">Counter phone *</label>
                 <input id="own-phone" name="phone" type="tel" class="form-input"
-                  autocomplete="tel" placeholder="+91 98765 43210" required />
+                  autocomplete="tel" placeholder="+91 98765 43210" value="+91 " required />
               </div>
               <div class="form-group">
                 <label for="own-password">Password *</label>
@@ -915,6 +929,16 @@
                   Password must contain at least 8 characters, including one uppercase letter,
                   one lowercase letter, one number and one special character.
                 </p>
+              </div>
+            </div>
+            </div>
+
+            <div class="form-step" data-owner-step="2" hidden>
+            <div class="auth-grid">
+              <div class="form-group">
+                <label for="own-kendra-name">Kendra / shop name *</label>
+                <input id="own-kendra-name" name="kendraName" type="text" class="form-input"
+                  placeholder="e.g. Jan Aushadhi Kendra - Sector 14" required />
               </div>
               <div class="form-group full-width">
                 <label for="own-address">Shop address *</label>
@@ -952,7 +976,9 @@
                   placeholder="e.g. 08:30 AM - 09:30 PM (All 7 Days)" />
               </div>
             </div>
+            </div>
 
+            <div class="form-step" data-owner-step="3" hidden>
             <div class="map-picker">
               <div class="map-picker__header">
                 <div>
@@ -991,12 +1017,18 @@
               </div>
             </div>
 
+            </div>
+
             <p id="owner-register-error" class="auth-error" hidden></p>
-            <button type="submit" class="btn btn--primary btn--large full-width" id="btn-register-owner">
-              Submit Kendra Registration
-            </button>
+            <div class="form-step__actions">
+              <button type="button" class="btn btn--outline" id="btn-owner-step-back" hidden>Back</button>
+              <button type="button" class="btn btn--primary" id="btn-owner-step-next">Continue</button>
+              <button type="submit" class="btn btn--primary btn--large" id="btn-register-owner" hidden>
+                Submit Kendra Registration
+              </button>
+            </div>
             <p class="auth-fineprint">
-              We email you a verification link first. After you verify your address, the
+              We email you a 6-digit OTP first. After you verify your address, the
               PMBJP administrator reviews your drug license and activates the shop.
             </p>
           </form>
@@ -1015,7 +1047,7 @@
           <div class="auth-status-icon" id="verify-icon">✉️</div>
           <h2 class="auth-title" id="verify-title">Verify your email</h2>
           <p class="auth-subtitle" id="verify-message">
-            Checking your verification link…
+            Enter the 6-digit OTP we emailed you to activate your account.
           </p>
 
           <div id="verify-spinner" class="drawer__loading" hidden>
@@ -1023,12 +1055,29 @@
             <p>Verifying your email address…</p>
           </div>
 
-          <a id="verify-dev-link" class="btn btn--primary btn--large full-width" href="#"
-            target="_blank" rel="noopener noreferrer" hidden>Open verification link</a>
+          <form id="otp-verify-form" class="auth-form" novalidate>
+            <div class="form-group">
+              <label for="otp-email">Email address</label>
+              <input id="otp-email" name="email" type="email" class="form-input"
+                autocomplete="email" placeholder="you@example.com" required />
+            </div>
+            <div class="form-group">
+              <label for="otp-code">6-digit OTP</label>
+              <input id="otp-code" name="otp" type="text" class="form-input" inputmode="numeric"
+                autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}"
+                placeholder="••••••" required />
+            </div>
+            <p id="otp-timer" class="auth-info" hidden></p>
+            <p id="otp-error" class="auth-error" hidden></p>
+            <p id="otp-info" class="auth-info" hidden></p>
+            <button type="submit" class="btn btn--primary btn--large full-width" id="btn-verify-otp">
+              Verify OTP
+            </button>
+          </form>
 
           <div id="verify-resend-block" class="auth-resend" hidden>
             <p class="auth-resend__text">
-              Need a new link? Enter the email address you registered with.
+              Need a new OTP? Enter the email address you registered with.
             </p>
             <form id="resend-verification-form" class="auth-form" novalidate>
               <div class="form-group">
@@ -1039,7 +1088,7 @@
               <p id="resend-error" class="auth-error" hidden></p>
               <p id="resend-info" class="auth-info" hidden></p>
               <button type="submit" class="btn btn--outline btn--large full-width" id="btn-resend">
-                Send a new verification link
+                Send a new OTP
               </button>
             </form>
           </div>
@@ -1087,6 +1136,20 @@
             Unauthorized access attempts are recorded. If you are a customer or Kendra
             owner, use the public <a href="/login" data-route="/login">sign-in page</a>.
           </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIEW 9: Page Not Found (unknown URLs) -->
+    <section id="view-notfound" class="view-panel auth-view">
+      <div class="auth-shell auth-shell--single">
+        <div class="auth-card auth-card--status">
+          <p class="auth-eyebrow">Error 404</p>
+          <h2 class="auth-title">Page not found</h2>
+          <p class="auth-subtitle">
+            The page you are looking for doesn’t exist or has been moved.
+          </p>
+          <a class="btn btn--primary btn--large full-width" href="/" data-route="/">Back to Home</a>
         </div>
       </div>
     </section>
@@ -1365,6 +1428,36 @@
       <div style="display: flex; gap: 10px; margin-top: 14px;">
         <button type="button" id="btn-cancel-reject-application" class="btn btn--outline" style="flex: 1;">Cancel</button>
         <button type="submit" id="btn-confirm-reject-application" class="btn btn--danger" style="flex: 2;">Confirm Rejection</button>
+      </div>
+    </form>
+  </div>
+
+  <!-- Admin Order Detail / Status Modal -->
+  <div id="admin-order-backdrop" class="modal-backdrop" hidden></div>
+  <div id="admin-order-modal" class="modal" hidden role="dialog" aria-modal="true" aria-labelledby="admin-order-modal-title">
+    <div class="modal__header">
+      <div>
+        <p class="modal__eyebrow">Order Oversight</p>
+        <h3 class="modal__title" id="admin-order-modal-title">Order detail</h3>
+      </div>
+      <button type="button" id="btn-close-admin-order" class="modal__close" aria-label="Close">&times;</button>
+    </div>
+    <form id="admin-order-status-form" class="modal__body">
+      <div id="admin-order-detail"></div>
+      <div class="form-group" style="margin-top: 16px;">
+        <label for="admin-order-status-select">Update order status</label>
+        <select id="admin-order-status-select" class="form-input">
+          <option value="placed">Placed</option>
+          <option value="confirmed">Confirmed</option>
+          <option value="ready">Ready</option>
+          <option value="out_for_delivery">Out for Delivery</option>
+          <option value="completed">Delivered</option>
+          <option value="cancelled">Out of Order</option>
+        </select>
+      </div>
+      <div style="display: flex; gap: 10px; margin-top: 14px;">
+        <button type="button" id="btn-cancel-admin-order" class="btn btn--outline" style="flex: 1;">Close</button>
+        <button type="submit" id="btn-update-admin-order-status" class="btn btn--primary" style="flex: 2;">Update Status</button>
       </div>
     </form>
   </div>

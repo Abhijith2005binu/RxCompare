@@ -54,6 +54,13 @@ async function authenticate(req, res, next) {
     if (!user) {
       return res.status(401).json({ success: false, error: "Please sign in to continue." });
     }
+    if (user.status === "suspended") {
+      return res.status(403).json({
+        success: false,
+        code: "ACCOUNT_SUSPENDED",
+        error: "Your account has been suspended. Please contact the PMBJP administrator.",
+      });
+    }
     req.user = user;
     next();
   } catch (err) {

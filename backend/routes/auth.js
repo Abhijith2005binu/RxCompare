@@ -15,7 +15,14 @@ const {
   adminPublicUser,
   safeEqual,
 } = require("../utils/auth");
-const { createVerificationToken, hashToken } = require("../utils/verification");
+const {
+  createOtp,
+  hashToken,
+  hashesMatch,
+  OTP_TTL_MS,
+  OTP_MAX_ATTEMPTS,
+  OTP_LENGTH,
+} = require("../utils/verification");
 const { sendVerificationEmail } = require("../services/emailService");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -34,14 +41,6 @@ function normalizeEmail(value) {
 
 function isAdminEmail(email) {
   return normalizeEmail(email) === normalizeEmail(process.env.ADMIN_EMAIL || "admin@rxcompare.gov.in");
-}
-
-function appBaseUrl() {
-  return (process.env.APP_URL || "http://localhost:3000").replace(/\/+$/, "");
-}
-
-function verificationLink(token) {
-  return `${appBaseUrl()}/verify-email?token=${encodeURIComponent(token)}`;
 }
 
 function validatePassword(password, errors) {
@@ -83,12 +82,14 @@ async function generateKendraCode() {
 }
 
 async function issueVerification(user, role) {
-  const { token, tokenHash, expiresAt } = createVerificationToken();
-  user.verificationTokenHash = tokenHash;
-  user.verificationTokenExpiresAt = expiresAt;
+  const { otp, otpHash, expiresAt } = createOtp();
+  user.verificationOtpHash = otpHash;
+  user.verificationOtpExpiresAt = expiresAt;
+  user.verificationOtpAttempts = 0;
+  user.verificationOtpSentAt = new Date();
   await user.save();
 
-  const link = verificationLink(token);
+  const expiresInMinutes = Math.round(OTP_TTL_MS / 60000);
   let emailSent = true;
   let emailPreviewUrl = null;
 
@@ -97,22 +98,19 @@ async function issueVerification(user, role) {
       to: user.email,
       name: user.name,
       role,
-      link,
+      otp,
+      expiresInMinutes,
     });
     emailPreviewUrl = info.previewUrl || null;
   } catch (err) {
     emailSent = false;
-    console.error("[auth] verification email failed:", err.message);
+    console.error("[auth] OTP email failed:", err.message);
   }
-
-  // Always log the link so development works even without an email inbox.
-  console.log(`[auth] verification link for ${user.email}: ${link}`);
 
   return {
     emailSent,
     emailPreviewUrl,
-    // Exposed only outside production to make manual testing easy.
-    devVerificationUrl: process.env.NODE_ENV === "production" ? undefined : link,
+    otpExpiresInMinutes: expiresInMinutes,
   };
 }
 
@@ -144,7 +142,7 @@ router.post("/register/customer", requireDb, async (req, res, next) => {
         return res.status(409).json({
           success: false,
           code: "EMAIL_EXISTS_UNVERIFIED",
-          error: "An account with this email already exists but is not verified. A new verification link has been sent.",
+          error: "An account with this email already exists but is not verified. A new 6-digit OTP has been sent to this email.",
           ...issued,
         });
       }
@@ -171,7 +169,8 @@ router.post("/register/customer", requireDb, async (req, res, next) => {
 
     return res.status(201).json({
       success: true,
-      message: "Registration successful. Please check your email to verify your account before signing in.",
+      message:
+        "Registration successful. We emailed you a 6-digit OTP — enter it to verify your account before signing in.",
       user: publicUser(user),
       ...issued,
     });
@@ -238,7 +237,7 @@ router.post("/register/kendra", requireDb, async (req, res, next) => {
         return res.status(409).json({
           success: false,
           code: "EMAIL_EXISTS_UNVERIFIED",
-          error: "An account with this email already exists but is not verified. A new verification link has been sent.",
+          error: "An account with this email already exists but is not verified. A new 6-digit OTP has been sent to this email.",
           ...issued,
         });
       }
@@ -300,37 +299,100 @@ router.post("/register/kendra", requireDb, async (req, res, next) => {
 });
 
 // ---------------------------------------------------------------------------
-// Email verification
+// Email verification (6-digit OTP)
 // ---------------------------------------------------------------------------
 router.post("/verify-email", requireDb, async (req, res, next) => {
   try {
-    const token = String((req.body && req.body.token) || "").trim();
-    if (!token) {
+    const email = normalizeEmail(req.body && req.body.email);
+    const otp = String((req.body && req.body.otp) || "").replace(/\s+/g, "");
+
+    if (!EMAIL_RE.test(email)) {
       return res.status(400).json({
         success: false,
-        code: "TOKEN_MISSING",
-        error: "Verification token is missing.",
+        code: "EMAIL_INVALID",
+        error: "A valid email address is required.",
       });
     }
 
-    const tokenHash = hashToken(token);
-    const user = await User.findOne({
-      verificationTokenHash: tokenHash,
-      verificationTokenExpiresAt: { $gt: new Date() },
-    }).select("+verificationTokenHash +verificationTokenExpiresAt");
+    if (!new RegExp(`^\\d{${OTP_LENGTH}}$`).test(otp)) {
+      return res.status(400).json({
+        success: false,
+        code: "OTP_INVALID_FORMAT",
+        error: `Enter the ${OTP_LENGTH}-digit code from your email.`,
+      });
+    }
+
+    const user = await User.findOne({ email }).select(
+      "+verificationOtpHash +verificationOtpExpiresAt +verificationOtpAttempts"
+    );
 
     if (!user) {
       return res.status(400).json({
         success: false,
-        code: "TOKEN_INVALID",
-        error: "This verification link is invalid or has expired. Please request a new one.",
+        code: "OTP_INVALID",
+        error: "This OTP is invalid or has expired. Please request a new one.",
+      });
+    }
+
+    if (user.emailVerified) {
+      return res.json({
+        success: true,
+        verified: true,
+        role: user.role,
+        email: user.email,
+        message: "This email address is already verified. You can sign in.",
+      });
+    }
+
+    if (!user.verificationOtpHash || !user.verificationOtpExpiresAt) {
+      return res.status(400).json({
+        success: false,
+        code: "OTP_NOT_REQUESTED",
+        error: "No active OTP found. Please request a new code.",
+      });
+    }
+
+    if (user.verificationOtpExpiresAt.getTime() <= Date.now()) {
+      user.verificationOtpHash = undefined;
+      user.verificationOtpExpiresAt = undefined;
+      user.verificationOtpAttempts = 0;
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        code: "OTP_EXPIRED",
+        error: "This OTP has expired. Please request a new code.",
+      });
+    }
+
+    if (!hashesMatch(hashToken(otp), user.verificationOtpHash)) {
+      const attempts = (user.verificationOtpAttempts || 0) + 1;
+      user.verificationOtpAttempts = attempts;
+
+      if (attempts >= OTP_MAX_ATTEMPTS) {
+        user.verificationOtpHash = undefined;
+        user.verificationOtpExpiresAt = undefined;
+        user.verificationOtpAttempts = 0;
+        await user.save();
+        return res.status(429).json({
+          success: false,
+          code: "OTP_LOCKED",
+          error: "Too many incorrect attempts. This OTP is no longer valid — request a new code.",
+        });
+      }
+
+      await user.save();
+      return res.status(400).json({
+        success: false,
+        code: "OTP_INCORRECT",
+        error: `Incorrect OTP. ${OTP_MAX_ATTEMPTS - attempts} attempt(s) remaining.`,
       });
     }
 
     user.emailVerified = true;
     user.verifiedAt = new Date();
-    user.verificationTokenHash = undefined;
-    user.verificationTokenExpiresAt = undefined;
+    user.verificationOtpHash = undefined;
+    user.verificationOtpExpiresAt = undefined;
+    user.verificationOtpAttempts = 0;
 
     if (user.role === KENDRA_ROLE) {
       // Application becomes visible to the admin only after email verification.
@@ -374,14 +436,14 @@ router.post("/resend-verification", requireDb, async (req, res, next) => {
       const issued = await issueVerification(user, user.role);
       return res.json({
         success: true,
-        message: "If the account exists and is unverified, a new verification link has been sent.",
+        message: "If the account exists and is unverified, a new 6-digit OTP has been sent.",
         ...issued,
       });
     }
 
     return res.json({
       success: true,
-      message: "If the account exists and is unverified, a new verification link has been sent.",
+      message: "If the account exists and is unverified, a new 6-digit OTP has been sent.",
     });
   } catch (err) {
     next(err);
@@ -421,11 +483,19 @@ router.post("/login", requireDb, async (req, res, next) => {
       return res.status(401).json({ success: false, error: "Invalid email or password." });
     }
 
+    if (user.status === "suspended") {
+      return res.status(403).json({
+        success: false,
+        code: "ACCOUNT_SUSPENDED",
+        error: "Your account has been suspended. Please contact the PMBJP administrator.",
+      });
+    }
+
     if (!user.emailVerified) {
       return res.status(403).json({
         success: false,
         code: "EMAIL_NOT_VERIFIED",
-        error: "Please verify your email address before signing in. Check your inbox or request a new verification link.",
+        error: "Please verify your email address before signing in. Check your inbox or request a new OTP.",
         email: user.email,
       });
     }

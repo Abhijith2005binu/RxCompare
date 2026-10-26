@@ -103,10 +103,10 @@ export function registerKendraOwner(data) {
   });
 }
 
-export function verifyEmail(token) {
+export function verifyEmail(email, otp) {
   return request("/auth/verify-email", {
     method: "POST",
-    body: JSON.stringify({ token }),
+    body: JSON.stringify({ email, otp }),
   });
 }
 
@@ -169,6 +169,24 @@ export function getAdminOrders() {
 
 export function getAdminUsers(role = "all") {
   return request(`/admin/users?role=${encodeURIComponent(role)}`);
+}
+
+export function setAdminUserStatus(id, status) {
+  return request(`/admin/users/${encodeURIComponent(id)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
+}
+
+export function getAdminKendras() {
+  return request("/admin/kendras");
+}
+
+export function setAdminKendraStatus(kendraCode, status) {
+  return request(`/admin/kendras/${encodeURIComponent(kendraCode)}/status`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }
 
 export function deleteAdminUser(id) {

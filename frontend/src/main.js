@@ -4,6 +4,7 @@ import {
   getAllMedicines,
   getKendrasForMedicine,
   getAllStores,
+  getNearbyStores,
   getUhiStatus,
   registerCustomer,
   registerKendraOwner,
@@ -19,6 +20,9 @@ import {
   rejectApplication,
   getAdminOrders,
   getAdminUsers,
+  setAdminUserStatus,
+  getAdminKendras,
+  setAdminKendraStatus,
   deleteAdminUser,
   getKendraInventory,
   updateKendraStock,
@@ -45,11 +49,14 @@ let allMedicinesCache = [];
 let allStoresCache = [];
 let activeCategory = "all";
 let currentDrawerMedicine = null;
+let drawerShowAllKendras = false;
 let currentKendraInventory = [];
 let currentKendraCategories = [];
 let currentCartQuote = null;
 let cartQuoteRequestId = 0;
 let rejectApplicationTarget = null;
+let adminOrdersCache = [];
+let adminOrderTarget = null;
 let loginRole = "customer";
 let userCoords = null;
 let checkoutOrderData = null;
@@ -237,6 +244,7 @@ const kpiKendraTotalItems = document.getElementById("kpi-kendra-total-items");
 const kpiKendraInStock = document.getElementById("kpi-kendra-in-stock");
 const kpiKendraOutStock = document.getElementById("kpi-kendra-out-stock");
 const kpiKendraOrders = document.getElementById("kpi-kendra-orders");
+const kpiPendingOrdersCard = document.getElementById("kpi-pending-orders-card");
 const kendraInventoryTbody = document.getElementById("kendra-inventory-tbody");
 const kendraInventorySearch = document.getElementById("kendra-inventory-search");
 const kendraOrdersList = document.getElementById("kendra-orders-list");
@@ -251,9 +259,11 @@ const kpiAdminSavings = document.getElementById("kpi-admin-savings");
 const kpiAdminCustomers = document.getElementById("kpi-admin-customers");
 const kpiAdminOwners = document.getElementById("kpi-admin-owners");
 const adminApprovalsTbody = document.getElementById("admin-approvals-tbody");
+const adminKendrasTbody = document.getElementById("admin-kendras-tbody");
 const adminOrdersTbody = document.getElementById("admin-orders-tbody");
 const adminUsersTbody = document.getElementById("admin-users-tbody");
 const countAdminPending = document.getElementById("count-admin-pending");
+const countAdminKendras = document.getElementById("count-admin-kendras");
 const countAdminOrders = document.getElementById("count-admin-orders");
 const countAdminUsers = document.getElementById("count-admin-users");
 const adminPendingCountBadge = document.getElementById("admin-pending-count");
@@ -282,6 +292,14 @@ const rejectApplicationReason = document.getElementById("reject-application-reas
 const rejectApplicationBackdrop = document.getElementById("reject-application-backdrop");
 const rejectApplicationModal = document.getElementById("reject-application-modal");
 
+// Admin order detail/status modal
+const adminOrderBackdrop = document.getElementById("admin-order-backdrop");
+const adminOrderModal = document.getElementById("admin-order-modal");
+const adminOrderDetail = document.getElementById("admin-order-detail");
+const adminOrderStatusForm = document.getElementById("admin-order-status-form");
+const adminOrderStatusSelect = document.getElementById("admin-order-status-select");
+const btnUpdateAdminOrderStatus = document.getElementById("btn-update-admin-order-status");
+
 // ---------------------------------------------------------------------
 // Authentication UI, Role Guards & History Router
 // ---------------------------------------------------------------------
@@ -309,7 +327,6 @@ const registerSuccess = document.getElementById("register-success");
 const registerSuccessTitle = document.getElementById("register-success-title");
 const registerSuccessMessage = document.getElementById("register-success-message");
 const registerSuccessEmail = document.getElementById("register-success-email");
-const registerSuccessLink = document.getElementById("register-success-link");
 const registerAuthTabs = document.querySelector("#view-register .auth-tabs");
 const btnRegisterCustomer = document.getElementById("btn-register-customer");
 const btnRegisterOwner = document.getElementById("btn-register-owner");
@@ -318,7 +335,13 @@ const verifyIcon = document.getElementById("verify-icon");
 const verifyTitle = document.getElementById("verify-title");
 const verifyMessage = document.getElementById("verify-message");
 const verifySpinner = document.getElementById("verify-spinner");
-const verifyDevLink = document.getElementById("verify-dev-link");
+const otpForm = document.getElementById("otp-verify-form");
+const otpEmail = document.getElementById("otp-email");
+const otpCode = document.getElementById("otp-code");
+const otpTimer = document.getElementById("otp-timer");
+const otpError = document.getElementById("otp-error");
+const otpInfo = document.getElementById("otp-info");
+const btnVerifyOtp = document.getElementById("btn-verify-otp");
 const verifyResendBlock = document.getElementById("verify-resend-block");
 const resendForm = document.getElementById("resend-verification-form");
 const resendEmail = document.getElementById("resend-email");
@@ -339,12 +362,27 @@ const ownerPincodeInput = document.getElementById("own-pincode");
 const ownerAddressInput = document.getElementById("own-address");
 
 let lastUnverifiedEmail = "";
+let otpTimerId = null;
+let otpExpiresAtTs = null;
 
 const ROLE_LABELS = {
   customer: "Customer",
   kendra_owner: "Kendra Owner",
   admin: "Administrator",
 };
+
+const ORDER_STATUS_LABELS = {
+  placed: "Placed",
+  confirmed: "Confirmed",
+  ready: "Ready",
+  out_for_delivery: "Out for Delivery",
+  completed: "Delivered",
+  cancelled: "Out of Order",
+};
+
+function orderStatusLabel(status) {
+  return ORDER_STATUS_LABELS[status] || String(status || "").replace(/_/g, " ");
+}
 
 const ROUTE_PATHS = {
   search: "/",
@@ -391,6 +429,16 @@ function passwordPolicyError(password) {
   return "";
 }
 
+function phoneValidationError(value) {
+  let digits = String(value || "").replace(/\D/g, "");
+  if (digits.length === 12 && digits.startsWith("91")) digits = digits.slice(2);
+  if (!digits) return "";
+  if (!/^\d{10}$/.test(digits)) {
+    return "Enter a valid 10-digit phone number (e.g. +91 98765 43210).";
+  }
+  return "";
+}
+
 function routeForView(viewName) {
   return ROUTE_PATHS[viewName] || "/";
 }
@@ -398,7 +446,7 @@ function routeForView(viewName) {
 function viewForPath(pathname) {
   const normalized = (pathname || "/").replace(/\/+$/, "") || "/";
   if (normalized === "/owner-login") return "login";
-  return PATH_VIEWS[normalized] || "search";
+  return PATH_VIEWS[normalized] || "notfound";
 }
 
 /**
@@ -471,7 +519,9 @@ function updateRoleUI() {
 }
 
 function canAccessView(viewName) {
-  if (["search", "login", "register", "verify-email", "admin-login"].includes(viewName)) {
+  if (
+    ["search", "login", "register", "verify-email", "admin-login", "notfound"].includes(viewName)
+  ) {
     return true;
   }
   if (!currentUser) return false;
@@ -633,7 +683,7 @@ loginForm?.addEventListener("submit", async (event) => {
       lastUnverifiedEmail = email;
       setFormMessage(
         loginInfo,
-        "Your email address is not verified yet. Opening the verification page so you can request a new link."
+        "Your email address is not verified yet. Opening the verification page so you can enter your OTP."
       );
       setTimeout(() => navigate("/verify-email"), 900);
     } else if (err.code === "KENDRA_REJECTED") {
@@ -720,7 +770,7 @@ function resetRegisterFeedback() {
   setFormMessage(ownerRegisterError, "");
 }
 
-function showRegisterSuccess({ title, message, email, link }) {
+function showRegisterSuccess({ title, message, email }) {
   if (registerCustomerForm) registerCustomerForm.hidden = true;
   if (registerOwnerForm) registerOwnerForm.hidden = true;
   setHidden(registerAuthTabs, true);
@@ -729,13 +779,6 @@ function showRegisterSuccess({ title, message, email, link }) {
   registerSuccessTitle.textContent = title;
   registerSuccessMessage.textContent = message;
   registerSuccessEmail.textContent = email || "";
-
-  if (link) {
-    registerSuccessLink.href = link;
-    setHidden(registerSuccessLink, false);
-  } else {
-    setHidden(registerSuccessLink, true);
-  }
 }
 
 registerCustomerForm?.addEventListener("submit", async (event) => {
@@ -759,6 +802,10 @@ registerCustomerForm?.addEventListener("submit", async (event) => {
   if (password !== confirmPassword) {
     return setFormMessage(customerRegisterError, "The two passwords do not match.");
   }
+  const customerPhoneError = phoneValidationError(phone);
+  if (customerPhoneError) {
+    return setFormMessage(customerRegisterError, customerPhoneError);
+  }
 
   btnRegisterCustomer.disabled = true;
   btnRegisterCustomer.textContent = "Creating account…";
@@ -766,24 +813,25 @@ registerCustomerForm?.addEventListener("submit", async (event) => {
   try {
     const res = await registerCustomer({ name, email, password, phone, address });
     lastUnverifiedEmail = email;
+    otpExpiresAtTs = Date.now() + (Number(res.otpExpiresInMinutes) || 10) * 60 * 1000;
     registerCustomerForm.reset();
     showRegisterSuccess({
       title: "Customer account created",
       message:
         res.message ||
-        "Check your inbox and click the verification link before signing in.",
+        "We emailed you a 6-digit OTP. Enter it on the verification page before signing in.",
       email,
-      link: res.devVerificationUrl || null,
     });
-    showToast("Registration saved. Please verify your email.", "✉️");
+    showToast("Registration saved. Please verify your email with the OTP.", "✉️");
   } catch (err) {
     const detail =
       Array.isArray(err.details) && err.details.length
         ? `${err.message}: ${err.details.join("; ")}`
         : err.message;
     setFormMessage(customerRegisterError, detail || "Registration failed.");
-    if (err.code === "EMAIL_EXISTS_UNVERIFIED" && err.devVerificationUrl) {
+    if (err.code === "EMAIL_EXISTS_UNVERIFIED") {
       lastUnverifiedEmail = email;
+      otpExpiresAtTs = Date.now() + (Number(err.body?.otpExpiresInMinutes) || 10) * 60 * 1000;
     }
   } finally {
     btnRegisterCustomer.disabled = false;
@@ -794,6 +842,12 @@ registerCustomerForm?.addEventListener("submit", async (event) => {
 registerOwnerForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
   setFormMessage(ownerRegisterError, "");
+
+  // Enter inside an earlier step acts as "Continue" instead of submitting.
+  if (ownerStep < OWNER_STEP_COUNT) {
+    if (validateOwnerStep(ownerStep)) showOwnerStep(ownerStep + 1);
+    return;
+  }
 
   const formData = new FormData(registerOwnerForm);
   const password = String(formData.get("password") || "");
@@ -850,6 +904,10 @@ registerOwnerForm?.addEventListener("submit", async (event) => {
       `Please fill in: ${missing.map(([, label]) => label).join(", ")}.`
     );
   }
+  const ownerPhoneError = phoneValidationError(payload.phone);
+  if (ownerPhoneError) {
+    return setFormMessage(ownerRegisterError, ownerPhoneError);
+  }
 
   btnRegisterOwner.disabled = true;
   btnRegisterOwner.textContent = "Submitting application…";
@@ -857,7 +915,9 @@ registerOwnerForm?.addEventListener("submit", async (event) => {
   try {
     const res = await registerKendraOwner(payload);
     lastUnverifiedEmail = payload.email;
+    otpExpiresAtTs = Date.now() + (Number(res.otpExpiresInMinutes) || 10) * 60 * 1000;
     registerOwnerForm.reset();
+    showOwnerStep(1);
     if (ownerMarker && ownerMap) {
       ownerMap.removeLayer(ownerMarker);
       ownerMarker = null;
@@ -866,11 +926,10 @@ registerOwnerForm?.addEventListener("submit", async (event) => {
       title: "Kendra registration submitted",
       message:
         res.message ||
-        "Verify your email address. After that the PMBJP administrator will review your shop.",
+        "We emailed you a 6-digit OTP. Verify it so the PMBJP administrator can review your shop.",
       email: payload.email,
-      link: res.devVerificationUrl || null,
     });
-    showToast("Kendra application saved. Please verify your email.", "✉️");
+    showToast("Kendra application saved. Please verify your email with the OTP.", "✉️");
   } catch (err) {
     const detail =
       Array.isArray(err.details) && err.details.length
@@ -884,57 +943,185 @@ registerOwnerForm?.addEventListener("submit", async (event) => {
 });
 
 // ---------------------------------------------------------------------
+// Kendra registration — 3-step wizard (same page)
+// ---------------------------------------------------------------------
+const OWNER_STEP_COUNT = 3;
+let ownerStep = 1;
+const ownerStepPanels = document.querySelectorAll("[data-owner-step]");
+const ownerProgressSteps = document.querySelectorAll("[data-owner-progress]");
+const ownerProgressFill = document.getElementById("owner-progress-fill");
+const btnOwnerStepNext = document.getElementById("btn-owner-step-next");
+const btnOwnerStepBack = document.getElementById("btn-owner-step-back");
+
+function showOwnerStep(step) {
+  ownerStep = Math.min(OWNER_STEP_COUNT, Math.max(1, step));
+
+  ownerStepPanels.forEach((panel) => {
+    panel.hidden = Number(panel.dataset.ownerStep) !== ownerStep;
+  });
+  ownerProgressSteps.forEach((indicator) => {
+    const index = Number(indicator.dataset.ownerProgress);
+    indicator.classList.toggle("is-active", index === ownerStep);
+    indicator.classList.toggle("is-complete", index < ownerStep);
+  });
+  if (ownerProgressFill) {
+    ownerProgressFill.style.width = `${(ownerStep / OWNER_STEP_COUNT) * 100}%`;
+  }
+  if (btnOwnerStepBack) btnOwnerStepBack.hidden = ownerStep === 1;
+  if (btnOwnerStepNext) btnOwnerStepNext.hidden = ownerStep === OWNER_STEP_COUNT;
+  if (btnRegisterOwner) btnRegisterOwner.hidden = ownerStep !== OWNER_STEP_COUNT;
+
+  if (ownerStep === OWNER_STEP_COUNT) {
+    requestAnimationFrame(() => initOwnerMap());
+  }
+}
+
+function validateOwnerStep(step) {
+  const panel = document.querySelector(`[data-owner-step="${step}"]`);
+  if (!panel) return true;
+
+  const fields = panel.querySelectorAll("input[required]");
+  for (const field of fields) {
+    if (!field.checkValidity()) {
+      field.reportValidity();
+      return false;
+    }
+  }
+
+  if (step === 1) {
+    const formData = new FormData(registerOwnerForm);
+    const password = String(formData.get("password") || "");
+    const confirmPassword = String(formData.get("confirmPassword") || "");
+    const passwordError = passwordPolicyError(password);
+    if (passwordError) {
+      setFormMessage(ownerRegisterError, passwordError);
+      return false;
+    }
+    if (password !== confirmPassword) {
+      setFormMessage(ownerRegisterError, "The two passwords do not match.");
+      return false;
+    }
+  }
+
+  return true;
+}
+
+btnOwnerStepNext?.addEventListener("click", () => {
+  setFormMessage(ownerRegisterError, "");
+  if (!validateOwnerStep(ownerStep)) return;
+  showOwnerStep(ownerStep + 1);
+});
+
+btnOwnerStepBack?.addEventListener("click", () => {
+  setFormMessage(ownerRegisterError, "");
+  showOwnerStep(ownerStep - 1);
+});
+
+showOwnerStep(1);
+
+// ---------------------------------------------------------------------
 // Email Verification
 // ---------------------------------------------------------------------
+function stopOtpTimer() {
+  if (otpTimerId) {
+    clearInterval(otpTimerId);
+    otpTimerId = null;
+  }
+  setHidden(otpTimer, true);
+}
+
+function startOtpTimer(remainingMs) {
+  stopOtpTimer();
+  if (!otpTimer) return;
+  otpExpiresAtTs = Date.now() + Math.max(0, Number(remainingMs) || 0);
+
+  const tick = () => {
+    const remaining = Math.max(0, otpExpiresAtTs - Date.now());
+    const minutes = String(Math.floor(remaining / 60000)).padStart(2, "0");
+    const seconds = String(Math.floor((remaining % 60000) / 1000)).padStart(2, "0");
+    otpTimer.textContent =
+      remaining > 0
+        ? `OTP valid for ${minutes}:${seconds}`
+        : "This OTP has expired. Request a new one below.";
+    if (remaining <= 0) {
+      if (otpTimerId) clearInterval(otpTimerId);
+      otpTimerId = null;
+    }
+  };
+
+  setHidden(otpTimer, false);
+  tick();
+  otpTimerId = setInterval(tick, 1000);
+}
+
 async function handleVerifyRoute() {
   const params = new URLSearchParams(window.location.search);
-  const token = params.get("token");
   const email = params.get("email") || lastUnverifiedEmail;
 
-  if (resendEmail && !resendEmail.value && email) {
-    resendEmail.value = email;
-  }
+  if (otpEmail && !otpEmail.value && email) otpEmail.value = email;
+  if (resendEmail && !resendEmail.value && email) resendEmail.value = email;
 
+  setFormMessage(otpError, "");
+  setFormMessage(otpInfo, "");
   setFormMessage(resendError, "");
   setFormMessage(resendInfo, "");
-  setHidden(verifyDevLink, true);
+  setHidden(verifySpinner, true);
+  setHidden(otpForm, false);
+  setHidden(verifyResendBlock, false);
 
-  if (!token) {
-    verifyIcon.textContent = "✉️";
-    verifyTitle.textContent = "Verify your email";
-    verifyMessage.textContent =
-      "Open the verification link we emailed you. Links expire after 24 hours. If yours has expired, request a new one below.";
-    setHidden(verifySpinner, true);
-    setHidden(verifyResendBlock, false);
-    return;
+  verifyIcon.textContent = "✉️";
+  verifyTitle.textContent = "Enter your verification OTP";
+  verifyMessage.textContent = email
+    ? `We emailed a 6-digit OTP to ${email}. Enter it below to activate your account.`
+    : "Enter the email address you registered with and the 6-digit OTP we emailed you.";
+
+  if (otpExpiresAtTs && otpExpiresAtTs > Date.now()) {
+    startOtpTimer(otpExpiresAtTs - Date.now());
+  } else {
+    stopOtpTimer();
   }
 
-  verifyIcon.textContent = "⏳";
-  verifyTitle.textContent = "Verifying your email";
-  verifyMessage.textContent = "Please wait while we confirm your verification link.";
-  setHidden(verifySpinner, false);
-  setHidden(verifyResendBlock, true);
+  if (otpCode) otpCode.focus();
+}
+
+otpForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  setFormMessage(otpError, "");
+  setFormMessage(otpInfo, "");
+
+  const email = otpEmail.value.trim().toLowerCase();
+  const otp = otpCode.value.replace(/\D/g, "");
+
+  if (!email) {
+    return setFormMessage(otpError, "Enter the email address you registered with.");
+  }
+  if (otp.length !== 6) {
+    return setFormMessage(otpError, "Enter the 6-digit OTP from your email.");
+  }
+
+  btnVerifyOtp.disabled = true;
+  btnVerifyOtp.textContent = "Verifying…";
 
   try {
-    const res = await verifyEmail(token);
+    const res = await verifyEmail(email, otp);
+    lastUnverifiedEmail = email;
+    stopOtpTimer();
+    otpExpiresAtTs = null;
+    otpForm.reset();
+    setHidden(otpForm, true);
+    setHidden(verifyResendBlock, true);
     verifyIcon.textContent = "✓";
     verifyTitle.textContent = "Email verified";
     verifyMessage.textContent = res.message || "Your email address has been verified.";
-    setHidden(verifySpinner, true);
-    setHidden(verifyResendBlock, true);
     showToast("Email verified. You can sign in now.", "✓");
-
-    // Remove the one-time token from the address bar.
-    window.history.replaceState({}, "", "/verify-email");
   } catch (err) {
-    verifyIcon.textContent = "⚠️";
-    verifyTitle.textContent = "Verification failed";
-    verifyMessage.textContent =
-      err.message || "This verification link is invalid or has expired.";
-    setHidden(verifySpinner, true);
-    setHidden(verifyResendBlock, false);
+    setFormMessage(otpError, err.message || "Could not verify this OTP.");
+    if (err.code === "OTP_EXPIRED" || err.code === "OTP_LOCKED") stopOtpTimer();
+  } finally {
+    btnVerifyOtp.disabled = false;
+    btnVerifyOtp.textContent = "Verify OTP";
   }
-}
+});
 
 resendForm?.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -953,16 +1140,16 @@ resendForm?.addEventListener("submit", async (event) => {
   try {
     const res = await resendVerification(email);
     lastUnverifiedEmail = email;
-    setFormMessage(resendInfo, res.message || "A new verification link has been sent.");
-    if (res.devVerificationUrl) {
-      verifyDevLink.href = res.devVerificationUrl;
-      setHidden(verifyDevLink, false);
+    if (otpEmail && !otpEmail.value) otpEmail.value = email;
+    setFormMessage(resendInfo, res.message || "A new 6-digit OTP has been sent.");
+    if (res.otpExpiresInMinutes) {
+      startOtpTimer(Number(res.otpExpiresInMinutes) * 60 * 1000);
     }
   } catch (err) {
-    setFormMessage(resendError, err.message || "Could not send a verification link.");
+    setFormMessage(resendError, err.message || "Could not send a new OTP.");
   } finally {
     btnResend.disabled = false;
-    btnResend.textContent = "Send a new verification link";
+    btnResend.textContent = "Send a new OTP";
   }
 });
 
@@ -2112,13 +2299,7 @@ if (btnHeroCompare) {
 
 if (btnHeaderLocate) {
   btnHeaderLocate.addEventListener("click", () => {
-    const targetMed = (lastSearchResults && lastSearchResults.length > 0) ? lastSearchResults[0] : (allMedicinesCache[0] || null);
-    if (targetMed) {
-      openDrawer(targetMed);
-    } else {
-      navigate("/");
-      searchInput.focus();
-    }
+    openKendraListDrawer();
   });
 }
 
@@ -2235,7 +2416,37 @@ function storeItemHTML(store) {
   `;
 }
 
-function renderDrawerBody({ loading, kendras, error }) {
+function kendraOnlyItemHTML(store) {
+  const distanceBadge =
+    typeof store.distanceKm === "number"
+      ? `<span class="store-item__distance">${store.distanceKm} km away</span>`
+      : `<span class="store-item__distance">${esc(store.city)}</span>`;
+
+  return `
+    <li class="store-item">
+      <div class="store-item__header">
+        <div class="store-item__title-group">
+          <span class="store-item__code">${esc(store.kendraCode || store.id)}</span>
+          <h5 class="store-item__name">${esc(store.name)}</h5>
+        </div>
+        ${distanceBadge}
+      </div>
+
+      <p class="store-item__address">${esc(store.address)}</p>
+
+      <div class="store-item__meta-row">
+        <span class="store-item__hours">${icon.clock} ${esc(store.operatingHours || "08:30 AM - 09:00 PM")}</span>
+      </div>
+
+      <div class="store-item__actions">
+        ${store.directionsUrl ? `<a href="${esc(store.directionsUrl)}" target="_blank" rel="noopener noreferrer" class="store-link store-link--nav">${icon.navArrow} Directions</a>` : ""}
+        ${store.phone ? `<a href="tel:${esc(store.phone)}" class="store-link store-link--call">${icon.phone} Call</a>` : ""}
+      </div>
+    </li>
+  `;
+}
+
+function renderDrawerBody({ loading, kendras, error, kendraOnly = false }) {
   if (loading) {
     drawerBody.innerHTML = `
       <div class="drawer__loading">
@@ -2254,8 +2465,19 @@ function renderDrawerBody({ loading, kendras, error }) {
     drawerBody.innerHTML = `
       <div class="drawer__empty-state">
         <p>No Kendras matching this filter.</p>
-        <p class="text-subtle">Try unchecking "Show In-Stock Only" or selecting a different region.</p>
+        <p class="text-subtle">${
+          kendraOnly
+            ? "Try selecting a different region."
+            : 'Try unchecking "Show In-Stock Only" or selecting a different region.'
+        }</p>
       </div>`;
+    return;
+  }
+
+  if (kendraOnly) {
+    drawerBody.innerHTML = `<ul class="drawer__list">${kendras
+      .map(kendraOnlyItemHTML)
+      .join("")}</ul>`;
     return;
   }
 
@@ -2284,16 +2506,63 @@ function renderDrawerBody({ loading, kendras, error }) {
 }
 
 async function fetchKendrasForDrawer() {
-  if (!currentDrawerMedicine) return;
-
   renderDrawerBody({ loading: true, kendras: [] });
   const inStockOnly = stockOnlyCheckbox.checked;
   const city = cityFilterSelect.value;
   const lat = userCoords ? userCoords.lat : null;
   const lng = userCoords ? userCoords.lng : null;
 
+  if (!currentDrawerMedicine) {
+    try {
+      let kendras = await getNearbyStores(lat, lng, 100);
+      if (city) {
+        const needle = city.trim().toLowerCase();
+        kendras = (kendras || []).filter(
+          (kendra) =>
+            String(kendra.city || "").toLowerCase() === needle ||
+            String(kendra.district || "").toLowerCase() === needle
+        );
+      }
+      renderDrawerBody({ loading: false, kendras, kendraOnly: true });
+    } catch (err) {
+      renderDrawerBody({ loading: false, kendras: [], error: err.message, kendraOnly: true });
+    }
+    return;
+  }
+
+  const medicineId = currentDrawerMedicine.id || currentDrawerMedicine._id;
+
   try {
-    const res = await getKendrasForMedicine(currentDrawerMedicine.id || currentDrawerMedicine._id, {
+    if (drawerShowAllKendras) {
+      // Every active Kendra, nearest first, with this medicine's live stock
+      // merged in so the region and in-stock filters keep working.
+      const [allKendras, stockedKendras] = await Promise.all([
+        getNearbyStores(lat, lng, 100),
+        getKendrasForMedicine(medicineId, { lat, lng, inStockOnly: false, limit: 100 }),
+      ]);
+      const stockedByCode = new Map(
+        (stockedKendras.kendras || []).map((kendra) => [kendra.kendraCode, kendra])
+      );
+      let kendras = (allKendras || []).map((kendra) => {
+        const stocked = stockedByCode.get(kendra.kendraCode);
+        return stocked || { ...kendra, inStock: false, unitsAvailable: 0 };
+      });
+      if (city) {
+        const needle = city.trim().toLowerCase();
+        kendras = kendras.filter(
+          (kendra) =>
+            String(kendra.city || "").toLowerCase() === needle ||
+            String(kendra.district || "").toLowerCase() === needle
+        );
+      }
+      if (inStockOnly) {
+        kendras = kendras.filter((kendra) => kendra.inStock === true);
+      }
+      renderDrawerBody({ loading: false, kendras });
+      return;
+    }
+
+    const res = await getKendrasForMedicine(medicineId, {
       lat,
       lng,
       inStockOnly,
@@ -2308,6 +2577,10 @@ async function fetchKendrasForDrawer() {
 
 function openDrawer(medicine) {
   currentDrawerMedicine = medicine;
+  drawerShowAllKendras = false;
+  drawerMedBanner.hidden = false;
+  const stockToggle = stockOnlyCheckbox.closest(".drawer__stock-toggle");
+  if (stockToggle) stockToggle.hidden = false;
   drawerTitle.textContent = `${medicine.genericName}`;
 
   const cheapestBranded = medicine.cheapestBrandedMrp;
@@ -2343,6 +2616,22 @@ function openDrawer(medicine) {
   fetchKendrasForDrawer();
 }
 
+function openKendraListDrawer() {
+  currentDrawerMedicine = null;
+  drawerShowAllKendras = true;
+  drawerTitle.textContent = "Jan Aushadhi Kendras";
+  drawerMedBanner.innerHTML = "";
+  drawerMedBanner.hidden = true;
+  const stockToggle = stockOnlyCheckbox.closest(".drawer__stock-toggle");
+  if (stockToggle) stockToggle.hidden = true;
+
+  drawer.classList.add("is-open");
+  drawerBackdrop.classList.add("is-open");
+  drawer.setAttribute("aria-hidden", "false");
+
+  fetchKendrasForDrawer();
+}
+
 function closeDrawer() {
   drawer.classList.remove("is-open");
   drawerBackdrop.classList.remove("is-open");
@@ -2364,7 +2653,7 @@ locateMeBtn.addEventListener("click", () => {
     (pos) => {
       userCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       locateMeBtn.innerHTML = `${icon.check} Located`;
-      cityFilterSelect.value = "";
+      drawerShowAllKendras = true;
       fetchKendrasForDrawer();
     },
     () => {
@@ -2619,7 +2908,7 @@ async function loadCustomerDashboard() {
               <span class="order-card__id">${esc(o.id)}</span>
               <span class="order-card__date">${new Date(o.createdAt).toLocaleString()}</span>
             </div>
-            <span class="status-pill status-pill--${esc(o.status)}">${esc(o.status)}</span>
+            <span class="status-pill status-pill--${esc(o.status)}">${esc(orderStatusLabel(o.status))}</span>
           </div>
 
           <div style="font-size: 0.85rem; color: var(--navy-deep); font-weight: 500;">
@@ -2751,7 +3040,9 @@ async function loadKendraDashboard() {
 
     const inStockCount = items.filter((i) => i.inStock).length;
     const outStockCount = items.length - inStockCount;
-    const pendingOrdersCount = orders.filter((o) => o.status === "placed" || o.status === "confirmed").length;
+    const pendingOrdersCount = orders.filter(
+      (o) => o.status !== "completed" && o.status !== "cancelled"
+    ).length;
 
     kpiKendraTotalItems.textContent = items.length;
     kpiKendraInStock.textContent = inStockCount;
@@ -2837,7 +3128,7 @@ function renderKendraOrders(orders) {
             <span class="order-card__id">${esc(o.id)}</span>
             <span class="order-card__date">${new Date(o.createdAt).toLocaleString()}</span>
           </div>
-          <span class="status-pill status-pill--${esc(o.status)}">${esc(o.status)}</span>
+          <span class="status-pill status-pill--${esc(o.status)}">${esc(orderStatusLabel(o.status))}</span>
         </div>
 
         <div style="display: flex; justify-content: space-between; font-size: 0.88rem; flex-wrap: wrap; gap: 8px;">
@@ -2859,16 +3150,35 @@ function renderKendraOrders(orders) {
 
         <div class="order-card__footer" style="gap: 8px;">
           <span class="text-subtle">Order Fulfillment:</span>
-          <div style="display: flex; gap: 6px;">
-            ${o.status === "placed" ? `<button type="button" class="btn btn--primary btn--sm" data-action="set-status" data-status="confirmed">Accept &amp; Confirm</button>` : ""}
-            ${o.status === "confirmed" ? `<button type="button" class="btn btn--primary btn--sm" data-action="set-status" data-status="ready">Mark Ready for Pickup / Delivery</button>` : ""}
-            ${o.status === "ready" ? `<button type="button" class="btn btn--outline btn--sm" style="background: #e6f6ee; color: #167a52;" data-action="set-status" data-status="completed">Complete Order</button>` : ""}
+          <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+            ${
+              o.status !== "cancelled" && o.status !== "completed"
+                ? `<button type="button" class="btn btn--outline btn--sm" style="background: #fff1f2; color: #b42318; border-color: #fecdd3;" data-action="set-status" data-status="cancelled">Out of Order</button>
+                   <button type="button" class="btn btn--outline btn--sm" style="background: #fffbeb; color: #92400e; border-color: #fde68a;" data-action="set-status" data-status="out_for_delivery">Out for Delivery</button>
+                   <button type="button" class="btn btn--outline btn--sm" style="background: #e6f6ee; color: #167a52; border-color: #a4ddbf;" data-action="set-status" data-status="completed">Delivered</button>`
+                : ""
+            }
           </div>
         </div>
       </div>`
     )
     .join("");
 }
+
+kpiPendingOrdersCard?.addEventListener("click", () => {
+  const ordersTab = document.querySelector('[data-subtab="kendra-orders"]');
+  if (ordersTab) ordersTab.click();
+  document
+    .getElementById("subtab-kendra-orders")
+    ?.scrollIntoView({ behavior: "smooth", block: "start" });
+});
+
+kpiPendingOrdersCard?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    kpiPendingOrdersCard.click();
+  }
+});
 
 kendraInventorySearch.addEventListener("input", (e) => {
   const term = e.target.value.toLowerCase().trim();
@@ -2947,7 +3257,7 @@ kendraOrdersList.addEventListener("click", async (e) => {
   btn.disabled = true;
   try {
     await updateOrderStatus(orderId, status);
-    showToast(`Order #${orderId} marked as ${status}`, "✓");
+    showToast(`Order #${orderId} marked as ${orderStatusLabel(status)}`, "✓");
     loadKendraDashboard();
   } catch (err) {
     alert(`Status update failed: ${err.message}`);
@@ -2963,15 +3273,17 @@ async function loadAdminDashboard() {
   }
 
   try {
-    const [statsRes, appsRes, ordersRes, usersRes] = await Promise.all([
+    const [statsRes, appsRes, kendrasRes, ordersRes, usersRes] = await Promise.all([
       getAdminStats(),
       getAdminApplications(),
+      getAdminKendras(),
       getAdminOrders(),
       getAdminUsers("all"),
     ]);
 
     const stats = statsRes.stats || {};
     const apps = appsRes.applications || [];
+    const kendras = kendrasRes.kendras || [];
     const orders = ordersRes.orders || [];
     const users = usersRes.users || [];
 
@@ -2983,12 +3295,14 @@ async function loadAdminDashboard() {
     kpiAdminOwners.textContent = `${stats.approvedOwners ?? 0} / ${stats.pendingOwners ?? 0}`;
 
     countAdminPending.textContent = apps.filter((a) => a.status === "pending").length;
+    countAdminKendras.textContent = kendras.length;
     countAdminOrders.textContent = orders.length;
     countAdminUsers.textContent = users.length;
     adminPendingCountBadge.textContent = stats.pendingApplications ?? 0;
     adminPendingCountBadge.hidden = (stats.pendingApplications ?? 0) === 0;
 
     renderAdminApplications(apps);
+    renderAdminKendras(kendras);
     renderAdminOrders(orders);
     renderAdminUsers(users);
   } catch (err) {
@@ -3009,9 +3323,16 @@ function renderAdminUsers(users) {
       const statusClass =
         user.status === "approved" || user.status === "active"
           ? "ready"
-          : user.status === "rejected"
+          : user.status === "rejected" || user.status === "suspended"
           ? "cancelled"
           : "confirmed";
+      const canSuspend = user.status === "active" || user.status === "approved";
+      const canReactivate = user.status === "suspended";
+      const nextStatus = canSuspend
+        ? "suspended"
+        : user.role === "kendra_owner"
+        ? "approved"
+        : "active";
       return `
         <tr data-user-id="${esc(user.id)}" data-user-name="${esc(user.name)}">
           <td>
@@ -3039,9 +3360,20 @@ function renderAdminUsers(users) {
             user.createdAt ? new Date(user.createdAt).toLocaleDateString() : "—"
           }</td>
           <td>
-            <button type="button" class="btn btn--outline btn--sm" data-action="delete-user">
-              Delete
-            </button>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              ${
+                canSuspend || canReactivate
+                  ? `<button type="button" class="btn ${
+                      canReactivate ? "btn--primary" : "btn--outline"
+                    } btn--sm" data-action="toggle-user-status" data-next-status="${nextStatus}">
+                       ${canReactivate ? "Reactivate" : "Suspend"}
+                     </button>`
+                  : ""
+              }
+              <button type="button" class="btn btn--outline btn--sm" data-action="delete-user">
+                Delete
+              </button>
+            </div>
           </td>
         </tr>`;
     })
@@ -3087,8 +3419,10 @@ function renderAdminApplications(apps) {
 }
 
 function renderAdminOrders(orders) {
+  adminOrdersCache = orders;
+
   if (orders.length === 0) {
-    adminOrdersTbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding: 24px;">No orders recorded in network.</td></tr>`;
+    adminOrdersTbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 24px;">No orders recorded in network.</td></tr>`;
     return;
   }
 
@@ -3109,11 +3443,172 @@ function renderAdminOrders(orders) {
             ${esc(o.paymentStatus || 'simulated_paid')}
           </span>
         </td>
-        <td><span class="status-pill status-pill--${esc(o.status)}">${esc(o.status)}</span></td>
+        <td><span class="status-pill status-pill--${esc(o.status)}">${esc(orderStatusLabel(o.status))}</span></td>
+        <td>
+          <button type="button" class="btn btn--outline btn--sm" data-action="view-order" data-order-id="${esc(o.id)}">View</button>
+        </td>
       </tr>`
     )
     .join("");
 }
+
+function renderAdminKendras(kendras) {
+  if (!adminKendrasTbody) return;
+  if (kendras.length === 0) {
+    adminKendrasTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px;">No Kendra stores registered yet.</td></tr>`;
+    return;
+  }
+
+  adminKendrasTbody.innerHTML = kendras
+    .map((kendra) => {
+      const isActive = kendra.status === "active";
+      const nextStatus = isActive ? "suspended" : "active";
+      const statusClass =
+        kendra.status === "active"
+          ? "ready"
+          : kendra.status === "suspended"
+          ? "cancelled"
+          : "confirmed";
+      return `
+        <tr data-kendra-code="${esc(kendra.kendraCode)}" data-kendra-name="${esc(kendra.name)}">
+          <td class="mono"><strong>${esc(kendra.kendraCode)}</strong></td>
+          <td>
+            <div style="font-weight: 600; color: var(--navy-deep);">${esc(kendra.name)}</div>
+            <div class="text-subtle">${esc(kendra.ownerName || "Owner not linked")}</div>
+          </td>
+          <td>${esc(kendra.city)}, ${esc(kendra.state)}</td>
+          <td>
+            <span class="status-pill status-pill--${statusClass}">${esc(kendra.status)}</span>
+          </td>
+          <td>
+            ${
+              kendra.status === "active" || kendra.status === "suspended"
+                ? `<button type="button" class="btn ${
+                    isActive ? "btn--danger" : "btn--primary"
+                  } btn--sm" data-action="toggle-kendra-status" data-next-status="${nextStatus}">
+                     ${isActive ? "Suspend" : "Reactivate"}
+                   </button>`
+                : `<span class="text-subtle">Not approved</span>`
+            }
+          </td>
+        </tr>`;
+    })
+    .join("");
+}
+
+adminKendrasTbody?.addEventListener("click", async (event) => {
+  const btn = event.target.closest('[data-action="toggle-kendra-status"]');
+  if (!btn) return;
+
+  const row = btn.closest("tr");
+  const kendraCode = row?.dataset.kendraCode;
+  const kendraName = row?.dataset.kendraName || kendraCode;
+  const nextStatus = btn.dataset.nextStatus;
+  if (!kendraCode || !nextStatus) return;
+
+  btn.disabled = true;
+  btn.textContent = nextStatus === "suspended" ? "Suspending…" : "Reactivating…";
+
+  try {
+    const res = await setAdminKendraStatus(kendraCode, nextStatus);
+    showToast(res.message || `${kendraName} is now ${nextStatus}.`, "✓");
+    await loadAdminDashboard();
+  } catch (err) {
+    showToast(`Kendra status error: ${err.message}`, "⚠️");
+    btn.disabled = false;
+    btn.textContent = nextStatus === "suspended" ? "Suspend" : "Reactivate";
+  }
+});
+
+adminOrdersTbody?.addEventListener("click", (event) => {
+  const btn = event.target.closest('[data-action="view-order"]');
+  if (!btn) return;
+  openAdminOrderModal(btn.dataset.orderId);
+});
+
+function openAdminOrderModal(orderId) {
+  const order = adminOrdersCache.find((o) => String(o.id) === String(orderId));
+  if (!order) {
+    showToast("Order not found in the loaded list.", "⚠️");
+    return;
+  }
+
+  adminOrderTarget = order.id;
+
+  const items = (order.items || [])
+    .map(
+      (item) =>
+        `<li>${esc(item.genericName)}${item.packSize ? ` · ${esc(item.packSize)}` : ""} — ${item.quantity} × ₹${Number(
+          item.genericMrp || 0
+        ).toFixed(2)}</li>`
+    )
+    .join("");
+  const history = (order.statusHistory || [])
+    .map(
+      (entry) =>
+        `<li>${esc(orderStatusLabel(entry.status))}${
+          entry.timestamp ? ` — ${new Date(entry.timestamp).toLocaleString()}` : ""
+        }</li>`
+    )
+    .join("");
+
+  if (adminOrderDetail) {
+    adminOrderDetail.innerHTML = `
+      <div style="display: grid; gap: 6px; font-size: 0.9rem;">
+        <div><span class="text-subtle">Customer:</span> <strong>${esc(order.customerName)}</strong></div>
+        <div><span class="text-subtle">Email:</span> ${esc(order.customerEmail || "—")}</div>
+        <div><span class="text-subtle">Phone:</span> ${esc(order.customerPhone || "—")}</div>
+        <div><span class="text-subtle">Delivery address:</span> ${esc(order.deliveryAddress || "—")}</div>
+        <div><span class="text-subtle">Kendra:</span> ${esc(order.kendraName)} (${esc(order.kendraCode)})</div>
+        <div><span class="text-subtle">Total:</span> <strong>₹${Number(order.totalAmount || 0).toFixed(2)}</strong></div>
+        <div><span class="text-subtle">Payment:</span> ${esc(order.paymentMethod || "—")} · ${esc(order.paymentStatus || "—")}</div>
+      </div>
+      <div style="margin-top: 12px;">
+        <strong>Items</strong>
+        <ul style="margin: 6px 0 0 18px;">${items || "<li>No items</li>"}</ul>
+      </div>
+      <div style="margin-top: 12px;">
+        <strong>Status history</strong>
+        <ul style="margin: 6px 0 0 18px;">${history || "<li>No history recorded</li>"}</ul>
+      </div>`;
+  }
+
+  if (adminOrderStatusSelect) adminOrderStatusSelect.value = order.status;
+  if (adminOrderBackdrop) adminOrderBackdrop.hidden = false;
+  if (adminOrderModal) adminOrderModal.hidden = false;
+}
+
+function closeAdminOrderModal() {
+  adminOrderTarget = null;
+  if (adminOrderBackdrop) adminOrderBackdrop.hidden = true;
+  if (adminOrderModal) adminOrderModal.hidden = true;
+}
+
+document.getElementById("btn-close-admin-order")?.addEventListener("click", closeAdminOrderModal);
+document.getElementById("btn-cancel-admin-order")?.addEventListener("click", closeAdminOrderModal);
+adminOrderBackdrop?.addEventListener("click", closeAdminOrderModal);
+
+adminOrderStatusForm?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const orderId = adminOrderTarget;
+  const status = adminOrderStatusSelect?.value;
+  if (!orderId || !status) return;
+
+  btnUpdateAdminOrderStatus.disabled = true;
+  btnUpdateAdminOrderStatus.textContent = "Updating…";
+
+  try {
+    await updateOrderStatus(orderId, status);
+    showToast(`Order #${orderId} marked as ${orderStatusLabel(status)}`, "✓");
+    closeAdminOrderModal();
+    await loadAdminDashboard();
+  } catch (err) {
+    showToast(`Status update failed: ${err.message}`, "⚠️");
+  } finally {
+    btnUpdateAdminOrderStatus.disabled = false;
+    btnUpdateAdminOrderStatus.textContent = "Update Status";
+  }
+});
 
 adminApprovalsTbody.addEventListener("click", async (e) => {
   const approveBtn = e.target.closest('[data-action="approve-kendra"]');
@@ -3201,6 +3696,33 @@ rejectApplicationForm?.addEventListener("submit", async (event) => {
 
 // Two-step inline confirmation keeps deletion safe without a blocking dialog.
 adminUsersTbody?.addEventListener("click", async (event) => {
+  const statusBtn = event.target.closest('[data-action="toggle-user-status"]');
+  if (statusBtn) {
+    const row = statusBtn.closest("tr");
+    const userId = row?.dataset.userId;
+    const userName = row?.dataset.userName || "this account";
+    const nextStatus = statusBtn.dataset.nextStatus;
+    if (!userId || !nextStatus) return;
+
+    statusBtn.disabled = true;
+    statusBtn.textContent = nextStatus === "suspended" ? "Suspending…" : "Reactivating…";
+
+    try {
+      const res = await setAdminUserStatus(userId, nextStatus);
+      showToast(
+        res.message ||
+          `${userName} is now ${nextStatus === "suspended" ? "suspended" : "active"}.`,
+        "✓"
+      );
+      await loadAdminDashboard();
+    } catch (err) {
+      showToast(`Account status error: ${err.message}`, "⚠️");
+      statusBtn.disabled = false;
+      statusBtn.textContent = nextStatus === "suspended" ? "Suspend" : "Reactivate";
+    }
+    return;
+  }
+
   const btn = event.target.closest('[data-action="delete-user"]');
   if (!btn) return;
 

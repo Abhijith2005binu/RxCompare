@@ -1,7 +1,7 @@
 /**
  * Unified Jan Aushadhi & Generic Medicine Catalog
  * Generated: 2026-10-25T06:32:51.458Z
- * Total records: 227 (15 baseline + 212 integrated from dataset, 13 duplicates prevented)
+ * Total records: 241 (15 baseline + 212 integrated from dataset + 14 AYUSH, 13 duplicates prevented)
  */
 
 module.exports = [
@@ -10526,6 +10526,557 @@ module.exports = [
       "chest",
       "amoxil syrup",
       "amoxicillin syrup 125mg/5ml"
+    ]
+  },
+  {
+    "id": "med-ayush-001",
+    "drugCode": "AYUSH-001",
+    "genericName": "Ashwagandha Capsules 500mg",
+    "composition": "Withania somnifera (Ashwagandha) root extract 500mg",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Capsule",
+    "packSize": "60 Capsules",
+    "genericMrp": 95,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store below 30°C in a dry place away from direct sunlight",
+    "uses": "Stress relief, strength and stamina, sleep quality, general immunity",
+    "purchaseInfo": {
+      "unitPrice": 1.58,
+      "packMrp": 95,
+      "packSize": "60 Capsules",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Himalaya Ashwagandha", "manufacturer": "Himalaya Wellness", "mrp": 190 },
+      { "brandName": "Dabur Ashwagandha", "manufacturer": "Dabur India Ltd", "mrp": 165 },
+      { "brandName": "Patanjali Ashwagandha Capsules", "manufacturer": "Patanjali Ayurved", "mrp": 120 }
+    ],
+    "searchKeywords": [
+      "ashwagandha",
+      "withania somnifera",
+      "stress",
+      "immunity",
+      "stamina",
+      "ayurveda",
+      "ayush",
+      "herbal",
+      "adaptogen"
+    ]
+  },
+  {
+    "id": "med-ayush-002",
+    "drugCode": "AYUSH-002",
+    "genericName": "Triphala Churna",
+    "composition": "Amalaki (Emblica officinalis), Bibhitaki (Terminalia bellirica), Haritaki (Terminalia chebula) in equal parts",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Churna (Powder)",
+    "packSize": "100g",
+    "genericMrp": 45,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in an airtight container below 30°C away from moisture",
+    "uses": "Constipation, digestion, detoxification, eye and skin health",
+    "purchaseInfo": {
+      "unitPrice": 45,
+      "packMrp": 45,
+      "packSize": "100g",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Dabur Triphala Churna", "manufacturer": "Dabur India Ltd", "mrp": 80 },
+      { "brandName": "Baidyanath Triphala Churna", "manufacturer": "Shree Baidyanath Ayurved Bhawan", "mrp": 75 },
+      { "brandName": "Patanjali Triphala Churna", "manufacturer": "Patanjali Ayurved", "mrp": 55 }
+    ],
+    "searchKeywords": [
+      "triphala",
+      "churna",
+      "constipation",
+      "digestion",
+      "detox",
+      "ayurveda",
+      "ayush",
+      "amla",
+      "haritaki",
+      "bibhitaki"
+    ]
+  },
+  {
+    "id": "med-ayush-003",
+    "drugCode": "AYUSH-003",
+    "genericName": "Chyawanprash",
+    "composition": "Amla (Emblica officinalis) with 40+ Ayurvedic herbs, ghee and honey",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Avaleha (Paste)",
+    "packSize": "500g",
+    "genericMrp": 145,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in a cool dry place below 30°C; keep the jar tightly closed",
+    "uses": "Immunity, respiratory health, energy and general wellness",
+    "purchaseInfo": {
+      "unitPrice": 145,
+      "packMrp": 145,
+      "packSize": "500g",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Dabur Chyawanprash", "manufacturer": "Dabur India Ltd", "mrp": 245 },
+      { "brandName": "Baidyanath Chyawanprash", "manufacturer": "Shree Baidyanath Ayurved Bhawan", "mrp": 210 },
+      { "brandName": "Patanjali Chyawanprash", "manufacturer": "Patanjali Ayurved", "mrp": 170 }
+    ],
+    "searchKeywords": [
+      "chyawanprash",
+      "chyavanprash",
+      "immunity",
+      "amla",
+      "ayurveda",
+      "ayush",
+      "herbal",
+      "tonic"
+    ]
+  },
+  {
+    "id": "med-ayush-004",
+    "drugCode": "AYUSH-004",
+    "genericName": "Giloy Ghanvati",
+    "composition": "Tinospora cordifolia (Giloy) extract",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Tablet",
+    "packSize": "40 Tablets",
+    "genericMrp": 38,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store below 30°C in a dry place protected from light",
+    "uses": "Immunity, recurrent fever, general debility",
+    "purchaseInfo": {
+      "unitPrice": 0.95,
+      "packMrp": 38,
+      "packSize": "40 Tablets",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Patanjali Giloy Ghanvati", "manufacturer": "Patanjali Ayurved", "mrp": 50 },
+      { "brandName": "Dabur Giloy Ghanvati", "manufacturer": "Dabur India Ltd", "mrp": 65 },
+      { "brandName": "Baidyanath Giloy Ghanvati", "manufacturer": "Shree Baidyanath Ayurved Bhawan", "mrp": 60 }
+    ],
+    "searchKeywords": [
+      "giloy",
+      "guduchi",
+      "tinospora",
+      "immunity",
+      "fever",
+      "ayurveda",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-005",
+    "drugCode": "AYUSH-005",
+    "genericName": "Tulsi Capsules",
+    "composition": "Ocimum sanctum (Tulsi) leaf extract 500mg",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Capsule",
+    "packSize": "60 Capsules",
+    "genericMrp": 75,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store below 30°C in a dry place away from direct sunlight",
+    "uses": "Respiratory immunity, cough and cold, stress",
+    "purchaseInfo": {
+      "unitPrice": 1.25,
+      "packMrp": 75,
+      "packSize": "60 Capsules",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Himalaya Tulasi", "manufacturer": "Himalaya Wellness", "mrp": 150 },
+      { "brandName": "Dabur Tulsi Capsules", "manufacturer": "Dabur India Ltd", "mrp": 125 },
+      { "brandName": "Patanjali Tulsi Capsules", "manufacturer": "Patanjali Ayurved", "mrp": 90 }
+    ],
+    "searchKeywords": [
+      "tulsi",
+      "tulasi",
+      "ocimum sanctum",
+      "immunity",
+      "cough",
+      "cold",
+      "ayurveda",
+      "ayush",
+      "herbal"
+    ]
+  },
+  {
+    "id": "med-ayush-006",
+    "drugCode": "AYUSH-006",
+    "genericName": "Shankhpushpi Syrup",
+    "composition": "Convolvulus pluricaulis (Shankhpushpi) extract",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Syrup",
+    "packSize": "200mL bottle",
+    "genericMrp": 85,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store below 30°C in a cool dry place; keep the bottle tightly closed",
+    "uses": "Memory, concentration, mental fatigue and sleep",
+    "purchaseInfo": {
+      "unitPrice": 85,
+      "packMrp": 85,
+      "packSize": "200mL bottle",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Baidyanath Shankhpushpi Syrup", "manufacturer": "Shree Baidyanath Ayurved Bhawan", "mrp": 150 },
+      { "brandName": "Zandu Shankhpushpi Syrup", "manufacturer": "Zandu Pharmaceutical Works", "mrp": 140 },
+      { "brandName": "Patanjali Shankhpushpi Syrup", "manufacturer": "Patanjali Ayurved", "mrp": 110 }
+    ],
+    "searchKeywords": [
+      "shankhpushpi",
+      "memory",
+      "concentration",
+      "sleep",
+      "brain",
+      "ayurveda",
+      "ayush",
+      "syrup"
+    ]
+  },
+  {
+    "id": "med-ayush-007",
+    "drugCode": "AYUSH-007",
+    "genericName": "Yashtimadhu Churna (Mulethi)",
+    "composition": "Glycyrrhiza glabra (Yashtimadhu) root powder",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Churna (Powder)",
+    "packSize": "100g",
+    "genericMrp": 42,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in an airtight container below 30°C away from moisture",
+    "uses": "Sore throat, cough, acidity and voice care",
+    "purchaseInfo": {
+      "unitPrice": 42,
+      "packMrp": 42,
+      "packSize": "100g",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Baidyanath Yashtimadhu Churna", "manufacturer": "Shree Baidyanath Ayurved Bhawan", "mrp": 85 },
+      { "brandName": "Patanjali Mulethi Churna", "manufacturer": "Patanjali Ayurved", "mrp": 60 },
+      { "brandName": "Zandu Yashtimadhu Churna", "manufacturer": "Zandu Pharmaceutical Works", "mrp": 80 }
+    ],
+    "searchKeywords": [
+      "yashtimadhu",
+      "mulethi",
+      "licorice",
+      "liquorice",
+      "throat",
+      "cough",
+      "acidity",
+      "ayurveda",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-008",
+    "drugCode": "AYUSH-008",
+    "genericName": "Brahmi Vati",
+    "composition": "Bacopa monnieri (Brahmi) with Shankhpushpi and Jatamansi",
+    "category": "AYUSH / Ayurveda",
+    "dosageForm": "Tablet",
+    "packSize": "30 Tablets",
+    "genericMrp": 55,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store below 30°C in a dry place protected from light",
+    "uses": "Memory, focus, anxiety and mental fatigue",
+    "purchaseInfo": {
+      "unitPrice": 1.83,
+      "packMrp": 55,
+      "packSize": "30 Tablets",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Baidyanath Brahmi Vati", "manufacturer": "Shree Baidyanath Ayurved Bhawan", "mrp": 105 },
+      { "brandName": "Zandu Brahmi Vati", "manufacturer": "Zandu Pharmaceutical Works", "mrp": 95 },
+      { "brandName": "Dabur Brahmi Vati", "manufacturer": "Dabur India Ltd", "mrp": 100 }
+    ],
+    "searchKeywords": [
+      "brahmi",
+      "bacopa",
+      "memory",
+      "focus",
+      "anxiety",
+      "mental fatigue",
+      "ayurveda",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-009",
+    "drugCode": "AYUSH-009",
+    "genericName": "Kabasura Kudineer Churna",
+    "composition": "Siddha herbal blend of 15 herbs including Nilavembu, Thoothuvalai and Adathodai",
+    "category": "AYUSH / Siddha",
+    "dosageForm": "Churna (Powder)",
+    "packSize": "50g",
+    "genericMrp": 40,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in an airtight container below 30°C away from moisture",
+    "uses": "Cold, cough, fever, throat irritation and respiratory support",
+    "purchaseInfo": {
+      "unitPrice": 40,
+      "packMrp": 40,
+      "packSize": "50g",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Siddha Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "IMPCOPS Kabasura Kudineer", "manufacturer": "IMPCOPS", "mrp": 75 },
+      { "brandName": "Arogya Kabasura Kudineer", "manufacturer": "Arogya Siddha Pharmacy", "mrp": 65 },
+      { "brandName": "Kerala Ayurveda Kabasura Kudineer", "manufacturer": "Kerala Ayurveda Ltd", "mrp": 90 }
+    ],
+    "searchKeywords": [
+      "kabasura",
+      "kudineer",
+      "siddha",
+      "cold",
+      "cough",
+      "fever",
+      "immunity",
+      "respiratory",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-010",
+    "drugCode": "AYUSH-010",
+    "genericName": "Nilavembu Kudineer Churna",
+    "composition": "Nilavembu (Andrographis paniculata) with eight Siddha herbs",
+    "category": "AYUSH / Siddha",
+    "dosageForm": "Churna (Powder)",
+    "packSize": "50g",
+    "genericMrp": 38,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in an airtight container below 30°C away from moisture",
+    "uses": "Fever, body ache, viral infections and immunity",
+    "purchaseInfo": {
+      "unitPrice": 38,
+      "packMrp": 38,
+      "packSize": "50g",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Siddha Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "IMPCOPS Nilavembu Kudineer", "manufacturer": "IMPCOPS", "mrp": 70 },
+      { "brandName": "Arogya Nilavembu Kudineer", "manufacturer": "Arogya Siddha Pharmacy", "mrp": 60 },
+      { "brandName": "Herbal Nilavembu Kudineer", "manufacturer": "Herbal Isai", "mrp": 55 }
+    ],
+    "searchKeywords": [
+      "nilavembu",
+      "kudineer",
+      "andrographis",
+      "fever",
+      "body ache",
+      "dengue",
+      "siddha",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-011",
+    "drugCode": "AYUSH-011",
+    "genericName": "Arnica Montana 30C Dilution",
+    "composition": "Arnica montana 30C homeopathic dilution in alcohol base",
+    "category": "AYUSH / Homeopathy",
+    "dosageForm": "Dilution",
+    "packSize": "30mL bottle",
+    "genericMrp": 35,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in a cool dry place away from direct sunlight; keep the bottle tightly closed",
+    "uses": "Muscle pain, bruises, sprains and injury recovery",
+    "purchaseInfo": {
+      "unitPrice": 35,
+      "packMrp": 35,
+      "packSize": "30mL bottle",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Homoeopathic Pharmacopoeia Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "SBL Arnica Montana 30C", "manufacturer": "SBL Pharmaceuticals", "mrp": 60 },
+      { "brandName": "Dr. Reckeweg Arnica Montana 30C", "manufacturer": "Dr. Reckeweg & Co.", "mrp": 120 },
+      { "brandName": "Schwabe Arnica Montana 30C", "manufacturer": "Dr. Willmar Schwabe India", "mrp": 65 }
+    ],
+    "searchKeywords": [
+      "arnica",
+      "arnica montana",
+      "homeopathy",
+      "homoeopathy",
+      "pain",
+      "bruise",
+      "sprain",
+      "injury",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-012",
+    "drugCode": "AYUSH-012",
+    "genericName": "Nux Vomica 30C Dilution",
+    "composition": "Strychnos nux-vomica 30C homeopathic dilution in alcohol base",
+    "category": "AYUSH / Homeopathy",
+    "dosageForm": "Dilution",
+    "packSize": "30mL bottle",
+    "genericMrp": 35,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in a cool dry place away from direct sunlight; keep the bottle tightly closed",
+    "uses": "Indigestion, acidity, nausea and hangover",
+    "purchaseInfo": {
+      "unitPrice": 35,
+      "packMrp": 35,
+      "packSize": "30mL bottle",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Homoeopathic Pharmacopoeia Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "SBL Nux Vomica 30C", "manufacturer": "SBL Pharmaceuticals", "mrp": 60 },
+      { "brandName": "Schwabe Nux Vomica 30C", "manufacturer": "Dr. Willmar Schwabe India", "mrp": 65 },
+      { "brandName": "Dr. Reckeweg Nux Vomica 30C", "manufacturer": "Dr. Reckeweg & Co.", "mrp": 115 }
+    ],
+    "searchKeywords": [
+      "nux vomica",
+      "homeopathy",
+      "homoeopathy",
+      "indigestion",
+      "acidity",
+      "nausea",
+      "hangover",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-013",
+    "drugCode": "AYUSH-013",
+    "genericName": "Sharbat-e-Banafsha",
+    "composition": "Viola odorata (Banafsha) flower extract with sugar and Unani herbs",
+    "category": "AYUSH / Unani",
+    "dosageForm": "Syrup",
+    "packSize": "200mL bottle",
+    "genericMrp": 65,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store below 30°C in a cool dry place; keep the bottle tightly closed",
+    "uses": "Cough, cold, sore throat and bronchial irritation",
+    "purchaseInfo": {
+      "unitPrice": 65,
+      "packMrp": 65,
+      "packSize": "200mL bottle",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Unani Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Hamdard Sharbat-e-Banafsha", "manufacturer": "Hamdard Laboratories", "mrp": 120 },
+      { "brandName": "Sadar Sharbat-e-Banafsha", "manufacturer": "Sadar Dawakhana", "mrp": 100 },
+      { "brandName": "Dehlvi Sharbat-e-Banafsha", "manufacturer": "Dehlvi Naturals", "mrp": 110 }
+    ],
+    "searchKeywords": [
+      "sharbat banafsha",
+      "banafsha",
+      "unani",
+      "cough",
+      "cold",
+      "sore throat",
+      "viola",
+      "ayush"
+    ]
+  },
+  {
+    "id": "med-ayush-014",
+    "drugCode": "AYUSH-014",
+    "genericName": "Itrifal Kishneezi",
+    "composition": "Kishneez (Coriandrum sativum) with Triphala and Unani herbs",
+    "category": "AYUSH / Unani",
+    "dosageForm": "Majoon (Paste)",
+    "packSize": "150g",
+    "genericMrp": 85,
+    "prescriptionRequired": false,
+    "storageInstructions": "Store in a cool dry place below 30°C; keep the container tightly closed",
+    "uses": "Constipation, digestion and blood purification",
+    "purchaseInfo": {
+      "unitPrice": 85,
+      "packMrp": 85,
+      "packSize": "150g",
+      "currency": "INR",
+      "subsidyScheme": "Ministry of AYUSH — AYUSH medicines at Jan Aushadhi Kendras",
+      "prescriptionRequired": false,
+      "regulatoryAuthority": "Ministry of AYUSH, Government of India",
+      "purchaseAvailability": "Available over the counter at Jan Aushadhi Kendras",
+      "qualityStandard": "AYUSH GMP & Unani Pharmacopoeial Standards"
+    },
+    "brandedEquivalents": [
+      { "brandName": "Hamdard Itrifal Kishneezi", "manufacturer": "Hamdard Laboratories", "mrp": 170 },
+      { "brandName": "Dehlvi Itrifal Kishneezi", "manufacturer": "Dehlvi Naturals", "mrp": 150 },
+      { "brandName": "Sadar Itrifal Kishneezi", "manufacturer": "Sadar Dawakhana", "mrp": 140 }
+    ],
+    "searchKeywords": [
+      "itrifal",
+      "kishneezi",
+      "unani",
+      "constipation",
+      "digestion",
+      "coriander",
+      "ayush"
     ]
   }
 ];

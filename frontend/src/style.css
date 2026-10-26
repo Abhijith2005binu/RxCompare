@@ -1642,6 +1642,25 @@ input, select, textarea {
   line-height: 1.15;
 }
 
+.kpi-card--action {
+  cursor: pointer;
+}
+
+.kpi-card--action:hover,
+.kpi-card--action:focus-visible {
+  border-color: var(--pmbjp-green);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.kpi-card__hint {
+  margin-top: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--pmbjp-green);
+}
+
 .text-emerald { color: var(--pmbjp-green) !important; }
 .text-navy { color: var(--primary-cyan) !important; }
 .text-rust { color: #dc2626 !important; }
@@ -1677,6 +1696,11 @@ input, select, textarea {
 .status-pill--completed {
   background-color: #dcfce7;
   color: #15803d;
+}
+
+.status-pill--out_for_delivery {
+  background-color: #ede9fe;
+  color: #6d28d9;
 }
 
 .status-pill--cancelled,
@@ -3511,7 +3535,7 @@ input, select, textarea {
   color: #f8fafc;
 }
 
-[data-theme="dark"] .drawer-med-banner {
+[data-theme="dark"] .drawer__med-banner {
   background-color: #111a2e;
   border-color: var(--border-line);
 }
@@ -3747,6 +3771,12 @@ input, select, textarea {
   border: 1px solid rgba(34, 197, 94, 0.35) !important;
 }
 
+[data-theme="dark"] .status-pill--out_for_delivery {
+  background-color: rgba(168, 85, 247, 0.18) !important;
+  color: #c4b5fd !important;
+  border: 1px solid rgba(168, 85, 247, 0.35) !important;
+}
+
 [data-theme="dark"] .status-pill--cancelled,
 [data-theme="dark"] .status-pill--rejected {
   background-color: rgba(239, 68, 68, 0.18) !important;
@@ -3944,6 +3974,94 @@ input, select, textarea {
 
 .auth-grid .full-width {
   grid-column: 1 / -1;
+}
+
+/* Multi-step Kendra registration */
+.form-progress {
+  margin: 2px 0 20px;
+}
+
+.form-progress__steps {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.form-progress__step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-subtle);
+  font-size: 11.5px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.form-progress__dot {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background-color: var(--border-line-subtle);
+  border: 1px solid var(--border-line);
+  color: var(--ink-subtle);
+  font-size: 12px;
+  font-weight: 700;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.form-progress__step.is-active .form-progress__dot {
+  background-color: var(--pmbjp-green);
+  border-color: var(--pmbjp-green);
+  color: #ffffff;
+}
+
+.form-progress__step.is-complete .form-progress__dot {
+  background-color: var(--pmbjp-green-light);
+  border-color: var(--pmbjp-green);
+  color: var(--pmbjp-green);
+}
+
+.form-progress__step.is-active .form-progress__label {
+  color: var(--dark-navy);
+}
+
+.form-progress__bar {
+  margin-top: 10px;
+  height: 4px;
+  border-radius: 999px;
+  background-color: var(--border-line-subtle);
+  overflow: hidden;
+}
+
+.form-progress__fill {
+  display: block;
+  height: 100%;
+  width: 33.33%;
+  border-radius: 999px;
+  background-color: var(--pmbjp-green);
+  transition: width 0.25s ease;
+}
+
+.form-step__actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.form-step__actions .btn {
+  flex: 1;
+}
+
+@media (max-width: 640px) {
+  .form-progress__label {
+    font-size: 10.5px;
+  }
 }
 
 .auth-form .form-group {
@@ -4675,4 +4793,219 @@ input, select, textarea {
   background: #052e2b;
   border-color: #0f766e;
   color: #5eead4;
+}
+
+/* =========================================================================
+   DARK-MODE TEXT CONTRAST CORRECTIONS
+   Fixes surfaces that stayed light while their text switched to the dark
+   theme's light ink (and vice versa).
+   ========================================================================= */
+
+/* Hero: CTA and live stats bar */
+[data-theme="dark"] .btn-hero-dark {
+  background-color: var(--pmbjp-green);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .btn-hero-dark:hover {
+  background-color: var(--pmbjp-green-hover);
+}
+
+[data-theme="dark"] .hero__stats {
+  background: rgba(17, 26, 46, 0.85);
+  border-color: #273752;
+}
+
+[data-theme="dark"] .hero__stat dt {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .hero__stat dd {
+  color: #4ade80;
+}
+
+/* Header logo tagline and results count */
+[data-theme="dark"] .nav__subword {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .results-badge {
+  background-color: rgba(34, 197, 94, 0.16);
+  border-color: rgba(34, 197, 94, 0.32);
+  color: #4ade80;
+}
+
+/* Promo cards */
+[data-theme="dark"] .promo-card__btn {
+  background-color: rgba(255, 255, 255, 0.14);
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .promo-card__btn:hover {
+  background-color: rgba(255, 255, 255, 0.24);
+}
+
+/* Medicine cards: muted labels and brand equivalents */
+[data-theme="dark"] .med-card__category,
+[data-theme="dark"] .med-card__meta {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .med-card__equivalents-box {
+  background-color: #0c1424;
+  border-color: #273752;
+}
+
+[data-theme="dark"] .equivalents-title {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .med-card__brand-item {
+  background-color: #111a2e;
+  border-color: #1e2c44;
+}
+
+[data-theme="dark"] .brand-name {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .brand-price {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .brand-mfr {
+  color: #94a3b8;
+}
+
+/* Kendra drawer controls and Kendra list */
+[data-theme="dark"] .drawer__controls {
+  background-color: #0c1424;
+  border-bottom-color: #1e2c44;
+}
+
+[data-theme="dark"] .drawer__select-label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .drawer__city-select {
+  background-color: #111a2e;
+  border-color: #273752;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .store-item {
+  background-color: #111a2e;
+  border-color: #1e2c44;
+}
+
+[data-theme="dark"] .store-item--unstocked {
+  background-color: #161c2e;
+}
+
+[data-theme="dark"] .store-item__code,
+[data-theme="dark"] .store-item__address,
+[data-theme="dark"] .store-item__hours {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .store-link--nav,
+[data-theme="dark"] .store-link--call {
+  background-color: #111a2e;
+  border-color: #273752;
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .store-link--nav:hover,
+[data-theme="dark"] .store-link--call:hover {
+  background-color: #182540;
+  border-color: #38bdf8;
+  color: #38bdf8;
+}
+
+/* Cart drawer items and footer */
+[data-theme="dark"] .cart-item {
+  background: #111a2e;
+  border-color: #1e2c44;
+}
+
+[data-theme="dark"] .cart-item:hover {
+  border-color: #38bdf8;
+}
+
+[data-theme="dark"] .cart-item__title {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .cart-item__meta {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .cart-item__price,
+[data-theme="dark"] .cart-total-price {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .cart-item__qty {
+  background: #0c1424;
+  border-color: #273752;
+}
+
+[data-theme="dark"] .btn-qty-sm {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .btn-qty-sm:hover {
+  background: #1e2c44;
+}
+
+[data-theme="dark"] .cart-item__qty-val {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .cart-drawer__footer {
+  background-color: #0c1424;
+}
+
+[data-theme="dark"] .cart-kendra-label {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .cart-kendra-select {
+  background-color: #111a2e;
+  border-color: #273752;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .cart-total-label {
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .cart-savings-banner {
+  background-color: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+}
+
+/* Toast, KPI hint and registration wizard progress */
+[data-theme="dark"] .toast {
+  background-color: #18233c;
+  color: #f8fafc;
+}
+
+[data-theme="dark"] .order-amount-tag strong {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .kpi-card__hint {
+  color: #4ade80;
+}
+
+[data-theme="dark"] .form-progress__step.is-complete .form-progress__dot {
+  background-color: rgba(74, 222, 128, 0.16);
+  border-color: #4ade80;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .form-progress__fill {
+  background-color: #22c55e;
 }
